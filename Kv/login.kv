@@ -1,0 +1,181 @@
+
+MDScreen:
+    name: 'Login'
+
+    MDFloatLayout:
+
+        # AsyncImage:
+        #     source: 'img/bg.png'
+        #     pos_hint: {"left": 1}
+        #     size_hint_x: None
+        #     width: root.width * 0.5  # Adjust this multiplier as needed
+        #     height: root.height
+        #     allow_stretch: True
+        #     keep_ratio: False  # To allow stretching while maintaining the aspect ratio
+
+        # AsyncImage:
+        #     source: 'img/floor.jpeg'
+        #     pos_hint: {"left": 2}
+        #     size_hint_x: None
+        #     width: root.width * 0.5  # Adjust this multiplier as needed
+        #     height: root.height 
+        #     allow_stretch: True
+        #     pos_hint: {"center_y": .1}
+        #     keep_ratio: True  # To allow stretching while maintaining the aspect ratio
+ 
+        # AsyncImage:
+        #     source: 'img/pc.png'
+        #     pos_hint: {"left": 2}
+        #     size_hint_x: None
+        #     width: root.width * 0.29  # Adjust this multiplier as needed
+        #     height: root.height 
+        #     allow_stretch: True
+        #     pos_hint: {"center_y": .87 , 'center_x': .22}
+        #     keep_ratio: True  # To allow stretching while maintaining the aspect ratio
+
+
+        # AsyncImage:
+        #     source: 'img/html.png'
+        #     pos_hint: {"left": 2}
+        #     size_hint_x: None
+        #     width: root.width * 0.55  # Adjust this multiplier as needed
+        #     height: root.height
+        #     allow_stretch: True
+        #     pos_hint: {"center_y": .43 , 'center_x': .229}
+        #     keep_ratio: True  # To allow stretching while maintaining the aspect ratio
+
+
+        # Image:
+        #     source: 'img/pic.png'
+        #     pos_hint: {"center_x": 0.92, "center_y": .09}
+        #     size_hint: None, None
+        #     size: 2400, 2400  # Set a fixed size, adjust values as neede
+
+  
+
+
+
+        MDRectangleFlatButton:
+            text: ""
+            pos_hint: {"center_x": .069, "center_y": .95}
+            size_hint: None, None
+           # size: dp(100), my_icon.height + dp(2)  # Set your desired width and height
+            md_bg_color: app.theme_cls.primary_color  # Set your desired background color
+
+        # MDIconButton:
+        #     id: my_icon
+        #     icon_size: "30sp"
+        #     icon: "img/logo.png"
+        #     pos_hint: {"center_x": .05, "center_y": .95}
+        #     theme_text_color: "Custom"
+        #     on_release: app.root.current = 'Login'
+
+        MDLabel:
+            id: label
+            text: 'NEXGENO'
+            theme_text_color: 'Custom'
+            pos_hint: {"center_x": .565, "center_y": .95}
+            text_color: 0.5, 0.5, 0.5, 1
+            bold: True
+            font_style: 'Body1'
+            font_size: "10sp"
+            opacity: 1
+
+        MDFloatLayout:
+            pos_hint: {"center_x": .5, "center_y": .45}
+
+
+            MDLabel:
+                text: 'Sign in Now'
+                theme_text_color: 'Custom'
+                pos_hint: {"center_x": 1.22, "center_y": .75}
+                text_color: 1,1,1,1
+                bold: True
+                font_size: "20sp"
+                opacity: 1
+
+
+            # MDIconButton:
+            #     id: my_icon
+            #     icon_size: "30sp"
+            #     icon: "img/logo.png"
+            #     pos_hint: {"center_x": 0.705, "center_y": .75}
+            #     theme_text_color: "Custom"
+            #     on_release: app.root.current = 'Login'
+
+
+    
+            MDTextField:
+                id: user
+                icon_left: "account"
+                hint_text: "Username"
+                pos_hint: {"center_x": 0.75 , 'center_y': 0.64}
+                mode: "rectangle"
+                size_hint_x: None
+                width: "250dp"
+
+            MDTextField:
+                id: pass_s
+                hint_text: "Password"
+                icon_left: "key"
+                mode: "rectangle"
+                pos_hint: {"center_x": 0.75 , 'center_y': 0.56}
+                size_hint_x: None
+                width: "250dp"
+                on_text_validate: login_button.state = 'down' if user.text and pass_s.text else 'normal'  # Trigger login button if both fields are non-empty
+                on_text: app.check_input_length()
+                password: True  # Set the password property to hide the entered text
+
+            
+            MDIconButton:
+                id: icon_button
+                icon: "eye-off"  # Set the initial icon state to eye-off
+                pos_hint: {"center_x": 0.82 , 'center_y': 0.555}
+                on_release:
+                    pass_s.password = not pass_s.password
+                    icon_button.icon = "eye-off" if pass_s.password else "eye"  # Toggle icon based on password visibility
+
+
+
+
+            MDRaisedButton:
+                id: login_button
+                text: "Login"
+                pos_hint: {"center_x": 0.75, 'center_y': 0.47}
+                _min_width: 500
+                disabled: True  # Initially disable the button
+                on_release: app.check_credentials()
+
+
+
+            
+            MDLabel:
+                id: label
+                text: 'Not a member yet ? '
+                pos_hint: {"center_x": 1.194, "center_y": .43}
+                font_style: 'Body1'
+                font_size: "10sp"
+                opacity: 0.7
+
+
+
+            MDLabel:
+                id: label
+                text: 'Contact Admin'
+                theme_text_color: 'Custom'
+                pos_hint: {"center_x": 1.26, "center_y": .43}
+                text_color: app.theme_cls.primary_color
+                font_style: 'Body1'
+                font_size: "10sp"
+                opacity: 0.7
+
+
+            
+
+
+
+
+
+
+
+

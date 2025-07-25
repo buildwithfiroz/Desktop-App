@@ -1,0 +1,55 @@
+#:import Animation kivy.animation.Animation
+
+MDScreen:
+    name: 'intro'
+
+
+    MDFloatLayout:
+
+        MDIconButton:
+            id: my_icon
+            icon_size: "30sp"
+            icon: "src/img/logo.png"
+            pos_hint: {"center_x": .05, "center_y": .95}
+            theme_text_color: "Custom"
+            on_release: app.root.current = 'Login'
+        
+        MDLabel:
+            id: label1
+            text: 'WELCOME'
+            theme_text_color: 'Custom'
+            pos_hint: {"center_x": .91, "center_y": .5}
+            text_color: 0.5, 0.5, 0.5, 1
+            bold:True
+            font_size: "60sp"
+            opacity: 1
+
+        MDIconButton:
+            id: my_icon1
+            icon_size: "110sp"
+            icon: "src/img/logo.png"
+            pos_hint: {"center_x": .51, "center_y": .55}
+            theme_text_color: "Custom"
+            on_release: app.root.current = 'Login'
+            opacity: 0
+
+
+        MDLabel:
+            id: label2
+            text: 'NEXGENO'
+            theme_text_color: 'Custom'
+            pos_hint: {"center_x": .91, "center_y": .46}
+            text_color: 0.5, 0.5, 0.5, 1
+            bold:True
+            font_size: "60sp"
+            opacity: 0
+
+        MDLabel:
+            id: label3
+            text: 'TECHNOLOGY PRIVATE LIMITED'
+            theme_text_color: 'Custom'
+            pos_hint: {"center_x": .95, "center_y": .42}
+            text_color: 0.5, 0.5, 0.5, 1
+            font_style: 'Body1'
+            font_size: "10sp"
+            opacity: 0
