@@ -1,34 +1,100 @@
-from kivy.core.window import Window 
+from kivy.config import Config
+
+# Must be set before importing any Kivy modules
+Config.set('graphics', 'resizable', '0')
+Config.set('graphics', 'borderless', '0')
+
+# login.py
+import os
+import sys
+import time
+import json
+from kivy.core.window import Window
+from kivy.clock import Clock
 from kivy.animation import Animation
 from kivymd.app import MDApp
 from kivy.lang.builder import Builder
 from kivy.uix.screenmanager import ScreenManager, Screen, NoTransition, FadeTransition
-from kivy.clock import Clock
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.button import MDFlatButton
 from threading import Thread
+from multiprocessing import Process, freeze_support
+from notify_popup import NotifyPopupApp  # Popup app
 from logic.logic import logic_main
-import time
+from clock_window import MsgApp  # Main clock app
+import subprocess
+from PIL import Image
+from io import BytesIO
+import requests
+from kivy.core.audio import SoundLoader
+from kivy.animation import Animation
+
+url = "https://demoerp.nexgeno.cloud/admin/timesheets_api/authenticate"
 
 
-class CustomScreen(Screen):  
+def update_remember_me(self, remember):
+    screen = self.sm.get_screen('Login')
+    screen.ids.remember_me_checkbox.active = remember
+
+def download_and_optimize_image(url: str, save_path: str, quality: int = 85) -> bool:
+    try:
+        headers = {
+            "Accept": "image/webp,image/apng,image/*,*/*;q=0.8",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+
+        }
+        
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+
+        # Verify content is actually an image
+        if 'image' not in response.headers.get('Content-Type', ''):
+            raise ValueError("Response is not an image")
+
+        img = Image.open(BytesIO(response.content)).convert("RGB")
+        img.save(save_path, format="JPEG", optimize=True, quality=quality)
+        return True
+        
+    except Exception as e:
+        print(f"[❌ Image Download Error] URL: {url} | Error: {e}")
+        return False
+
+CACHE_FILE = "user_cache.json"
+
+
+def load_user_cache():
+    if not os.path.exists(CACHE_FILE):
+        return {}
+    with open(CACHE_FILE, "r") as f:
+        return json.load(f)
+
+
+def save_user_cache(data):
+    with open(CACHE_FILE, "w") as f:
+        json.dump(data, f, indent=4)
+
+
+def run_notify_popup(firstname, profile_thumb, checkin_time, job_position):
+    python_executable = sys.executable
+    script_path = os.path.abspath("notify_popup.py")
+    args = [
+        python_executable,
+        script_path,
+        firstname,
+        profile_thumb,
+        checkin_time,
+        job_position
+    ]
+    subprocess.Popen(args)
+
+    
+    
+
+
+class CustomScreen(Screen):
     def on_success_login(self):
-        self.ids.login_button.text = ""  
-        self.ids.login_button.disabled = True  
-        # self.spinner = MDSpinner(
-        #     size_hint=(None, None),
-        #     size=(46, 46),
-        #     pos_hint={"center_x": 0.5, "center_y": 0.5},
-        #     active=True,
-        #     palette=[
-        #         [0.29, 0.84, 0.60, 1],
-        #         [0.35, 0.32, 0.87, 1],
-        #         [0.89, 0.36, 0.59, 1],
-        #         [0.88, 0.91, 0.41, 1],
-        #     ],
-        # )
-        # self.add_widget(self.spinner)
-        #Clock.schedule_once(lambda dt: self.load_next_screen(), 2)
+        self.ids.login_button.text = ""
+        self.ids.login_button.disabled = True
 
     def load_next_screen(self):
         self.remove_widget(self.children[-1])
@@ -37,20 +103,76 @@ class CustomScreen(Screen):
 
 
 class Notify(MDApp):
+    
+    def update_remember_me(self, remember):
+        """Update the remember me state in the UI and cache"""
+        screen = self.sm.get_screen('Login')
+        if screen:
+            screen.ids.remember_me_checkbox.active = remember
+            # Update cache immediately when checkbox changes
+            cache_data = load_user_cache()
+            cache_data["remember_me"] = remember
+            save_user_cache(cache_data)
+            
+            
     def build(self):
-        self.login_start_time = None
         self.theme_cls.theme_style = "Dark"
         self.theme_cls.primary_palette = "DeepPurple"
         Window.borderless = True
         Window.fullscreen = 'auto'
 
-        self.sm = ScreenManager(transition=FadeTransition(duration=0.5))
+        self.sm = ScreenManager(transition=FadeTransition(duration=0.2))
         self.sm.add_widget(Builder.load_file("./Kv/splash.kv"))
         self.sm.add_widget(Builder.load_file("./Kv/login.kv"))
-
         return self.sm
+    
+    def update_loader_progress(self, increment=10):
+        # This method will update the progress bar based on the increment value
+        login_screen = self.sm.get_screen('Login')
+        loader = login_screen.ids.loader_overlay  # This is the LoaderOverlay widget
+
+        if loader and hasattr(loader, 'ids'):
+            progress_bar = loader.ids.get('loader_overlay')  # Get the MDProgressBar inside the overlay
+            if progress_bar:
+                # Update the progress bar value with the increment
+                progress_bar.value += increment
+                
+                # If the progress reaches 100%, reset the progress bar to 0 and stop the progress simulation
+                if progress_bar.value >= progress_bar.max:
+                    progress_bar.value = 0  # Reset the progress bar to 0
+                    self.hide_loader()  # Hide loader after completion
+                    return False  # Return False to stop progress simulation
+        return True
+    
+
+
+    def show_loader(self):
+        login_screen = self.sm.get_screen("Login")
+        overlay = login_screen.ids.get("loader_overlay")
+        if overlay:
+            overlay.disabled = False
+            Animation(opacity=1, duration=0.3).start(overlay)
+            
+            
+
+    def hide_loader(self):
+        login_screen = self.sm.get_screen("Login")
+        overlay = login_screen.ids.get("loader_overlay")
+        if overlay:
+            anim = Animation(opacity=0, duration=0.3)
+            anim.bind(on_complete=lambda *x: setattr(overlay, "disabled", True))
+            anim.start(overlay)
+
+    def dismiss_dialog(self, instance):
+        if hasattr(self, "dialog") and self.dialog:
+            self.dialog.dismiss()
+            self.dialog = None
 
     def on_start(self):
+    # Load remember me state from cache
+        cache_data = load_user_cache()
+        if "remember_me" in cache_data:
+            self.update_remember_me(cache_data["remember_me"])
         self.start_intro_animation()
 
     def start_intro_animation(self):
@@ -83,7 +205,7 @@ class Notify(MDApp):
     def redirect_to_login(self):
         self.sm.transition = FadeTransition(duration=0.5)
         self.sm.current = 'Login'
-        Clock.schedule_once(lambda dt: setattr(self.sm, 'transition', NoTransition()), 0.6)
+        Clock.schedule_once(lambda dt: setattr(self.sm, 'transition', NoTransition()), 3)
 
     def check_input_length(self):
         screen = self.sm.get_screen('Login')
@@ -92,65 +214,176 @@ class Notify(MDApp):
             password = screen.ids.pass_s.text
             screen.ids.login_button.disabled = len(username) < 3 or len(password) < 3
 
+  
+
     def login_success_ui(self, data):
-        end_time = time.perf_counter()
-        total_time = end_time - self.login_start_time
-        print(f"✅ Total time from login button click to showing result on UI: {total_time:.4f} seconds")
-
-        # Optional: show login time in dialog
-        self.dialog = MDDialog(
-            text=f"✅ Login successful in {total_time:.2f} seconds",
-            buttons=[MDFlatButton(text="OK", on_release=self.dismiss_dialog)]
-        )
-        self.dialog.open()
-
-        print("Logged in user data:", data)
+        sound = SoundLoader.load('./src/audio/ting.mp3')
+        if sound:
+            sound.play()
+        firstname = data.get("full_name", "User")  # Updated to full name
+        job_position = data.get("job_position", "Staff")  # ✅ Add this line
+        profile_thumb_url = data.get("profile_thumb", "src/img/logo.png")
+        checkin_time = data.get("checkin_time", "N/A")
 
 
-
-    def check_credentials(self):
         screen = self.sm.get_screen('Login')
-        screen.ids.login_button.disabled = True
         username = screen.ids.user.text
         password = screen.ids.pass_s.text
-        url = "https://demoerp.nexgeno.cloud/admin/timesheets_api/authenticate"
+
+        # Save optimized image path
+        local_img_path = f"./tmp/{username.replace('@', '_').replace('.', '_')}_thumb.jpg"
+        os.makedirs("tmp", exist_ok=True)
+
+        def finalize_and_launch_app(img_path):
+            remember_me = screen.ids.remember_me_checkbox.active
+            cache_data = {
+                "logged_in": True,
+                "popup_shown": False,
+                "firstname": firstname,
+                "job_position": job_position,
+                "profile_thumb": img_path,
+                "checkin_time": checkin_time,
+                "username": username if remember_me else "",
+                "password": password if remember_me else "",
+                "remember_me": remember_me
+            }
+            save_user_cache(cache_data)
+
+            # Launch popup
+            run_notify_popup(firstname, img_path, checkin_time, job_position)
+
+            # Exit current app
+            self.stop()
+            sys.exit(0)
+
+        def background_image_worker():
+            print(f"[🔁 Downloading profile image from: {profile_thumb_url}]")
+            if download_and_optimize_image(profile_thumb_url, local_img_path):
+                print("[✅ Image Downloaded]")
+                img_path = local_img_path
+            else:
+                print("[⚠️ Falling back to default image]")
+                img_path = "src/img/logo.png"
+            Clock.schedule_once(lambda dt: finalize_and_launch_app(img_path), 0)
+
+
+        # 🔄 Start background image download
+        Thread(target=background_image_worker, daemon=True).start()
+
+
+
+    
+    def check_credentials(self):
+        screen = self.sm.get_screen('Login')
+        
+        
+        # Hide the login button and show the loader
+        login_button = screen.ids.login_button
+        login_button.disabled = True
+        login_button.opacity = 0  # Hide the button
+
+        self.show_loader()  # Show the full-screen loader
+
+        username = screen.ids.user.text
+        password = screen.ids.pass_s.text
+        
+
+        # Start the time measurement for progress
+        start_time = time.time()
+
+        # Function to update the loader dynamically based on elapsed time
+        def update_progress_simulation(dt):
+            elapsed_time = time.time() - start_time  # Get the elapsed time
+            total_time = 5  # Estimated total time in seconds (you can adjust this based on your network speed or expected duration)
+
+            # Calculate the percentage of completion based on elapsed time
+            progress_percentage = (elapsed_time / total_time) * 100
+            progress_percentage = min(progress_percentage, 100)  # Cap at 100%
+
+            # Update progress bar dynamically
+            if not self.update_loader_progress(increment=progress_percentage):
+                return False  # Stop updating progress once it's complete
+
+            return True  # Keep updating
+
+        # Call this function every 0.1 seconds to update the progress bar
+        update_progress_event = Clock.schedule_interval(update_progress_simulation, 0.1)
+
+        def on_login_success(result_data):
+            from kivymd.toast import toast
+            toast(f"Login successful in {result_data.get('duration', 0):.2f}s")
+
+            # Show the login button back
+            login_button.opacity = 1
+            login_button.disabled = False
+            self.hide_loader()  # Hide loader
+            self.login_success_ui(result_data)
+
+            # Stop the progress simulation once the login is successful
+            Clock.unschedule(update_progress_event)
+
+        def on_login_error(e):
+            print(f"Login failed: {str(e)}")
+            
+            sound = SoundLoader.load('./src/audio/delete.mp3')
+            if sound:
+                sound.play()
+
+            # Show the login button back
+            login_button.opacity = 1
+            login_button.disabled = False
+            self.show_error_dialog("unauthorized")
+            self.hide_loader()  # Hide loader
+
+            # Stop the progress simulation once the login fails
+            Clock.unschedule(update_progress_event)
 
         def login_thread():
-            self.login_start_time = time.perf_counter()  # Start timer
-            result_data = logic_main(url, username, password)
-            end_time = time.perf_counter()
-            total_time = end_time - self.login_start_time
+            try:
+                result_data = logic_main(url, username, password)
+                if not result_data:
+                    raise Exception("Login failed: No data returned")
+                Clock.schedule_once(lambda dt: on_login_success(result_data), 0)
+            except Exception as e:
+                Clock.schedule_once(lambda dt, err=e: on_login_error(err), 0)
 
-            if not result_data:
-                print(f"❌ Total time from login button click to showing error dialog: {total_time:.4f} seconds")
-                Clock.schedule_once(lambda dt: self.show_error_dialog("unauthorized"))
-            else:
-                print(f"✅ Total time from login button click to showing result on UI: {total_time:.4f} seconds")
-                Clock.schedule_once(lambda dt: self.login_success_ui(result_data))
+        Thread(target=login_thread, daemon=True).start()
 
-        Thread(target=login_thread).start()
+
 
 
 
     def show_error_dialog(self, reason="unknown"):
-        if reason == "unauthorized":
-            text = "Incorrect username or password. Please try again."
-        elif reason == "dns":
-            text = "Could not reach server. Check your internet connection."
-        elif reason == "http_error":
-            text = "Server error occurred. Try again later."
-        else:
-            text = "Login failed. Please try again."
+        error_messages = {
+            "unauthorized": "Incorrect username or password. Please try again.",
+            "dns": "Could not reach server. Check your internet connection.",
+            "http_error": "Server error occurred. Try again later.",
+            "unknown": "Login failed. Please try again."
+        }
 
         self.dialog = MDDialog(
-            text=text,
+            text=error_messages.get(reason, error_messages["unknown"]),
             buttons=[MDFlatButton(text="OK", on_release=self.dismiss_dialog)]
         )
         self.dialog.open()
 
-    def dismiss_dialog(self, instance):
-        self.dialog.dismiss()
 
+if __name__ == "__main__":
+    freeze_support()
+    cache_data = load_user_cache()
 
-if __name__ == '__main__':
-    Notify().run()
+    # Only auto-login if both logged_in and remember_me are True
+    should_auto_login = cache_data.get("logged_in", False) and cache_data.get("remember_me", True)
+    
+    if should_auto_login:
+        MsgApp().run()
+    else:
+        # Clear credentials if remember_me was unchecked
+        if cache_data.get("remember_me") is False:
+            save_user_cache({
+                "logged_in": False,
+                "remember_me": False,
+                "username": "",
+                "password": ""
+            })
+        Notify().run()

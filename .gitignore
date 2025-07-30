@@ -1,0 +1,54 @@
+# Python bytecode files
+__pycache__/
+*.py[cod]
+
+
+# Virtual environment directory
+myenv/
+
+.environment
+loader.py
+# Kivy / KivyMD specific
+.kv/.log/
+.kv/.buildozer/
+.kv/build/
+.kv/.tox/
+
+# Temporary or cache directories
+tmp/
+
+.cache/
+
+# .idea directory for PyCharm
+.idea/
+
+# VS Code settings
+.vscode/
+
+# Mac OS specific
+.DS_Store
+
+# Windows specific
+Thumbs.db
+
+# Logs
+*.log
+page.py
+
+
+# Kivy specific cache or configuration
+.kivy/
+
+# Custom cache file
+user_cache.json
+
+# If your app stores logs
+logs/
+
+# Ignore tmp directories that hold generated content
+tmp/
+
+
+
+# Ignore system-specific files
+*.swp

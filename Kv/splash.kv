@@ -5,15 +5,7 @@ MDScreen:
 
 
     MDFloatLayout:
-
-        MDIconButton:
-            id: my_icon
-            icon_size: "30sp"
-            icon: "src/img/logo.png"
-            pos_hint: {"center_x": .05, "center_y": .95}
-            theme_text_color: "Custom"
-            on_release: app.root.current = 'Login'
-        
+    
         MDLabel:
             id: label1
             text: 'WELCOME'
@@ -28,7 +20,7 @@ MDScreen:
             id: my_icon1
             icon_size: "110sp"
             icon: "src/img/logo.png"
-            pos_hint: {"center_x": .51, "center_y": .55}
+            pos_hint: {"center_x": .5, "center_y": .56}
             theme_text_color: "Custom"
             on_release: app.root.current = 'Login'
             opacity: 0
@@ -43,6 +35,7 @@ MDScreen:
             bold:True
             font_size: "60sp"
             opacity: 0
+            
 
         MDLabel:
             id: label3

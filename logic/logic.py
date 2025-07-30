@@ -1,4 +1,6 @@
+
 # logic/logic.py
+
 import requests
 import time
 import socket
@@ -76,8 +78,12 @@ def logic_main(url: str, username: str, password: str):
         data, duration, _ = login_optimized(session, username, password, url)
         logger.info(f"✅ Login succeeded in {duration:.4f} seconds.")
 
-        firstname = data.get("firstname")
+        # Extracting values from response
+        firstname = data.get("firstname", "")
+        lastname = data.get("lastname", "")
+        full_name = f"{firstname} {lastname}".strip()
         thumb_url = data.get("profile_thumb")
+        job_position = data.get("job_position")
 
         checkin_time_str = data.get("checkin", {}).get("datetime")
         checkin_time_fmt = None
@@ -90,8 +96,9 @@ def logic_main(url: str, username: str, password: str):
                 logger.warning("Invalid check-in time format")
 
         return {
-            "firstname": firstname,
+            "full_name": full_name,
             "profile_thumb": thumb_url,
+            "job_position": job_position,
             "checkin_time": checkin_time_fmt,
             "duration": duration
         }
@@ -99,6 +106,33 @@ def logic_main(url: str, username: str, password: str):
     except Exception as e:
         logger.error(f"❌ Login attempt failed: {e}")
         return None
+
+
+def clock_in(session: requests.Session, username: str, password: str, url: str, timeout: float = 5.0):
+    """
+    Send a clock-in request to the server using stored username and password.
+    """
+    payload = {"email": username, "password": password}  # or whatever payload your clock-in API expects
+
+    headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json, text/plain, */*',
+        'Connection': 'keep-alive',
+        'Accept-Encoding': 'gzip, deflate'
+    }
+
+    start_time = time.perf_counter()
+    response = session.post(url, json=payload, headers=headers, timeout=timeout)
+    response.raise_for_status()
+    elapsed = time.perf_counter() - start_time
+
+    data = response.json()
+    if not data.get("status", False):
+        raise ValueError(f"Clock-in failed: {data.get('message', 'Unknown error')}")
+
+    return data, elapsed, response.text
+
+
 
 
 
