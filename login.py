@@ -28,8 +28,11 @@ from io import BytesIO
 import requests
 from kivy.core.audio import SoundLoader
 from kivy.animation import Animation
+from dotenv import load_dotenv
 
-url = "https://demoerp.nexgeno.cloud/admin/timesheets_api/authenticate"
+load_dotenv()
+
+url = os.getenv('URL')
 
 
 def update_remember_me(self, remember):

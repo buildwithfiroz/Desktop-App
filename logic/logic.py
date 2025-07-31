@@ -7,9 +7,18 @@ import socket
 import logging
 from requests.adapters import HTTPAdapter, Retry
 from datetime import datetime
+from dotenv import load_dotenv
+import os 
+
+load_dotenv()
+
+domain = os.getenv('ENDPOINT')
+
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 
 def create_session() -> requests.Session:
@@ -65,14 +74,14 @@ def login_optimized(session: requests.Session, username: str, password: str, url
 
 def logic_main(url: str, username: str, password: str):
     try:
-        socket.gethostbyname("demoerp.nexgeno.cloud")
+        socket.gethostbyname(f"{domain}")
     except socket.gaierror as e:
         logger.error(f"DNS resolution failed: {e}")
         return None
 
     session = create_session()
     logger.info("⏱️ Warming up connection...")
-    warm_up_connection(session, "https://demoerp.nexgeno.cloud/")
+    warm_up_connection(session, f"https://{domain}/")
 
     try:
         data, duration, _ = login_optimized(session, username, password, url)

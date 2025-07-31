@@ -12,12 +12,9 @@ This ***Desktop application*** is designed to streamline the login process for e
 700-900ms
 > - ***One-time Login***: After the first login, employees stay logged in with the
 "Remember Me" option.
-> - ***Auto Time Tracking***: Automatically tracks working hours with a one-click Clock In
-feature
 > - ***Employee Data Sync***: Fetches employee info (name, position, etc.) directly from
-the CRM API.
+the API.
 > - ***Automatic Startup***: The app runs automatically on system boot for seamless login
-and time tracking.
 
 
 
@@ -83,7 +80,7 @@ and time tracking.
    - The login process may take 300-500ms, much faster than typical APIs.
 
     <br>
-   <img src="src/git/Desktop-login.png" alt="Desktop View" width="70%" />
+   <img src="src/git/Desktop-login.png" alt="Desktop View" width="50%" />
      <br>
 
 2. **View the Success Window**  
@@ -92,7 +89,7 @@ and time tracking.
    - If your credentials are correct, you will see a success message confirming the login.
 
     <br>
-   <img src="src/git/output-login.png" alt="Desktop View" width="70%" />
+   <img src="src/git/output-login.png" alt="Desktop View" width="50%" />
     <br>
 
 3. **No Need for Re-login**  
@@ -100,7 +97,7 @@ and time tracking.
    - You will no longer need to enter your Username or Password. Simply click Clock In to start tracking your time.
 
     <br>
-   <img src="src/git/clock-in.png" alt="Desktop View" width="70%" />
+   <img src="src/git/clock-in.png" alt="Desktop View" width="30%" />
     <br>
 
 
@@ -108,24 +105,96 @@ and time tracking.
 ## 5. Summary  
 Watch this quick video to understand the simple workflow and how the app makes login and time tracking effortless.
 
-https://github.com/user-attachments/assets/81b78b7e-f1e4-47d1-82a3-57739bb2562d
+
+https://github.com/user-attachments/assets/9b7a71e2-a9ad-4ec1-88ee-ab9846043489
+
 
 
 
 <br>
+<br>
 
+# Login Performance Comparison
+
+## 🚀 CRM Enhancer vs. Postman
+
+| Feature              | CRM Login Enhancer                                                                 | Traditional (Postman/API)                                                              |
+|----------------------|-------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------|
+| **Login Speed**      | ⏱️ 300–500ms                                                                       | 🕒 800–1500ms seconds                                                                    |
+| **Login Screenshot** | <img src="src/git/benchmark-inhouse.png" width="100%"/>                             | <img src="src/git/benchmark-postmen.png" width="60%"/>                                  |
+
+<br>
+
+<br>
+
+
+> [!NOTE]
+>
+> Follow these steps to get started - 
+>
+> **Step 1:**  
+> Clone the repository  
+> ```bash
+> git clone https://github.com/buildwithfiroz/Desktop-App.git
+> ```
+>
+> **Step 2:**  
+> Change directory into the project folder  
+> ```bash
+> cd Desktop-App
+> ```
+>
+> **Step 3:**  
+> Create a Python virtual environment  
+> ```bash
+> python3 -m venv myenv
+> ```
+>
+> **Step 4:**  
+> Activate the virtual environment  
+> - On macOS/Linux:  
+> ```bash
+> source myenv/bin/activate
+> ```
+> - On Windows (PowerShell):  
+> ```powershell
+> .\myenv\Scripts\Activate.ps1
+> ```
+>
+> **Step 5:**  
+> Install required dependencies  
+> ```bash
+> pip3 install -r requirements.txt
+> ```
+>
+> **Step 6:**  
+> Run the app  
+> ```bash
+> python3 login.py
+> ```
+>
+> Now enjoy using Desktop app, or customize it further as needed!
+>
+>
+
+
+<br>
 <br>
 
 ## 👨‍💻 Author - Contact Information
-
-
-<br>
-
-This project is proudly built and maintained by [@buildwithfiroz](https://github.com/buildwithfiroz) — focused on making AI tools more accessible, efficient, and developer-friendly.
+---
+This project is proudly built and maintained by [@buildwithfiroz](https://github.com/buildwithfiroz).
 
 If you found this useful, consider giving it a ***⭐️ on GitHub*** or contributing to improve it further!
 
 <br>
+
+<p align="left">
+  <a href="https://github.com/buildwithfiroz">
+    <img width='220' src="https://img.shields.io/badge/GitHub-@buildwithfiroz-181717?logo=github&style=for-the-badge" alt="GitHub" /></a> &nbsp;
+  <a href="mailto:buildbyfiroz@icloud.com">
+    <img width='250' src="https://img.shields.io/badge/Email-buildbyfiroz@icloud.com-blue?logo=gmail&style=for-the-badge" alt="Email" /></a>
+</p>
 
 ---
 
