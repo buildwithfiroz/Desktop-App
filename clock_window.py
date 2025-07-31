@@ -62,186 +62,159 @@ def on_clock_in_button_press():
 
 KV = """
 
-ScreenManager:
-    id: screen_manager
+FloatLayout:
+    canvas.before:
+        Color:
+            rgba: 0.184, 0.184, 0.184, 0.7  # #2f2f2f
+        Rectangle:
+            pos: self.pos
+            size: self.size
 
-    MainScreen:
-        name: "main"
+    MDBoxLayout:
+        size_hint: 1, None
+        height: dp(550)
+        pos_hint: {"top": 1}
+        padding: [dp(15), dp(15), dp(15), 0]
+        radius: [20, 20, 20, 20]
+        elevation: 12
+        orientation: 'vertical'
 
-    SettingsScreen:
-        name: "settings"
-        
+        # PROFILE IMAGE
+        FitImage:
+            id: profile_image
+            source: ""
+            size_hint_y: None
+            height: dp(340)
+            radius: [30, 30, 40, 40]
+            allow_stretch: True
+            
+            canvas.before:
+                Color:
+                    rgba: 0.1, 0.1, 0.1, 0.95
+                RoundedRectangle:
+                    pos: self.pos
+                    size: self.size
+                    radius: [20, 20, 20, 20]
 
-<MainScreen@FloatLayout>:
-    FloatLayout:
-        canvas.before:
-            Color:
-                rgba: 0.184, 0.184, 0.184, 0.7  # #2f2f2f
-            Rectangle:
-                pos: self.pos
-                size: self.size
 
+        # SPACING BELOW IMAGE
+        Widget:
+            size_hint_y: None
+            height: dp(20)
+
+        # NAME + BODY + BUTTON WRAPPER
         MDBoxLayout:
-            size_hint: 1, None
-            height: dp(550)
-            pos_hint: {"top": 1}
-            padding: [dp(15), dp(15), dp(15), 0]
-            radius: [20, 20, 20, 20]
-            elevation: 12
-            orientation: 'vertical'
+            orientation: "vertical"
+            size_hint_y: None
+            height: self.minimum_height
+            spacing: dp(16)
+            padding: [dp(18), dp(13), dp(24), 0]
 
-            # PROFILE IMAGE
-            FitImage:
-                id: profile_image
-                source: ""
-                size_hint_y: None
-                height: dp(340)
-                radius: [30, 30, 40, 40]
-                allow_stretch: True
-                
-                canvas.before:
-                    Color:
-                        rgba: 0.1, 0.1, 0.1, 0.95
-                    RoundedRectangle:
-                        pos: self.pos
-                        size: self.size
-                        radius: [20, 20, 20, 20]
-
-
-            # SPACING BELOW IMAGE
-            Widget:
-                size_hint_y: None
-                height: dp(20)
-
-            # NAME + BODY + BUTTON WRAPPER
+            # NAME + TICK
             MDBoxLayout:
-                orientation: "vertical"
+                orientation: 'horizontal'
                 size_hint_y: None
-                height: self.minimum_height
-                spacing: dp(16)
-                padding: [dp(18), dp(13), dp(24), 0]
+                height: dp(40)
+                spacing: dp(6)
+                pos_hint: {"left": 0.9}
 
-                # NAME + TICK
-                MDBoxLayout:
-                    orientation: 'horizontal'
-                    size_hint_y: None
-                    height: dp(40)
-                    spacing: dp(6)
-                    pos_hint: {"left": 0.9}
-
-                    MDLabel:
-                        id: user_name
-                        text: ""
-                        theme_text_color: "Custom"
-                        text_color: (1, 1, 1, 0.9)
-                        adaptive_size: True
-                        bold:True
-                        font_size: "30sp"
-                        
-
-                    MDIcon:
-                        icon: "check-decagram"
-                        theme_text_color: "Custom"
-                        text_color: (0.113, 0.631, 0.949, 0.89)
-                        font_size: "25sp"
-                        size_hint: None, None
-                        size: self.texture_size
-                        pos_hint: {"center_y": 0.45}
-
-                # MOTIVATION LINE
                 MDLabel:
-                    text: "Driven by code, united by purpose and passion."
-                    theme_text_color: "Secondary"
-                    font_style: "Body1"
-                    font_size: "20sp"
-                    halign: "left"
-                    size_hint_y: None
-                    height: self.texture_size[1]
+                    id: user_name
+                    text: ""
+                    theme_text_color: "Custom"
+                    text_color: (1, 1, 1, 0.9)
+                    adaptive_size: True
+                    bold:True
+                    font_size: "30sp"
                     
-                # CLOCK IN ROW
-                MDGridLayout:
-                    cols: 2
-                    spacing: dp(12)
+
+                MDIcon:
+                    icon: "check-decagram"
+                    theme_text_color: "Custom"
+                    text_color: (0.113, 0.631, 0.949, 0.89)
+                    font_size: "25sp"
+                    size_hint: None, None
+                    size: self.texture_size
+                    pos_hint: {"center_y": 0.45}
+
+            # MOTIVATION LINE
+            MDLabel:
+                text: "Driven by code, united by purpose and passion."
+                theme_text_color: "Secondary"
+                font_style: "Body1"
+                font_size: "20sp"
+                halign: "left"
+                size_hint_y: None
+                height: self.texture_size[1]
+                
+            # CLOCK IN ROW
+            MDGridLayout:
+                cols: 2
+                spacing: dp(12)
+                size_hint_y: None
+                height: dp(50)
+               
+
+                # CLOCK IN BUTTON
+                MDBoxLayout:
+                    orientation: "vertical"
+                    size_hint_y: None
+                    height: self.minimum_height
+                    padding: [0, dp(10)]  # Top and bottom padding
+
+                    MDFillRoundFlatIconButton:
+                        id: check_in_button
+                        text: "Clock In"
+                        icon: "clock-outline"
+                        size_hint: None, None
+                        width: dp(240)
+                        height: dp(50)
+                        font_size: "15sp"
+                        padding: [dp(30),dp(10),dp(30),dp(10)]  # Top and bottom padding
+                        on_release: (app.on_clock_in_button_press(), app.start_action())
+
+                        # Colors - soft whiteish-gre
+                        md_bg_color: 0.145, 0.827, 0.4, 0.72
+                        text_color: 1,1,1, 0.95
+                        icon_color:  1,1,1, 0.95
+                        blod:True
+                        theme_text_color: "Custom"
+
+                        # Position
+                        pos_hint: {"center_x": 0.53}
+
+                # STATUS COLUMN
+                MDBoxLayout:
+                    orientation: "horizontal"
+                    spacing: dp(5)
                     size_hint_y: None
                     height: dp(50)
-                
+                    #pos_hint: {"y": 1}
+                    padding: [dp(45), 0, 0, 0]
 
-                    # CLOCK IN BUTTON
-                    MDBoxLayout:
-                        orientation: "vertical"
+                    # CLOCK ICON
+                    MDIcon:
+                        icon: "watch"
+                        theme_text_color: "Custom"
+                        text_color: 1, 1, 1, 0.8
+                        font_size: "29sp"
+                        size_hint: None, None
+                        size: dp(24), dp(24)
+                        pos_hint: {"y": 0.3}
+
+                    # CLOCK-IN TIME LABEL
+                    MDLabel:
+                        id: timer_label
+                        text: ""
+                        theme_text_color: "Secondary"
+                        font_style: "Body1"
+                        font_size: "14sp"
+                        text_color: 0.3, 0.3, 0.3, 1
                         size_hint_y: None
-                        height: self.minimum_height
-                        padding: [0, dp(10)]  # Top and bottom padding
-
-                        MDFillRoundFlatIconButton:
-                            id: check_in_button
-                            text: "Clock In"
-                            icon: "clock-outline"
-                            size_hint: None, None
-                            width: dp(240)
-                            height: dp(50)
-                            font_size: "15sp"
-                            padding: [dp(30),dp(10),dp(30),dp(10)]  # Top and bottom padding
-                            on_release: (app.on_clock_in_button_press(), app.start_action())
-
-                            # Colors - soft whiteish-gre
-                            md_bg_color: 0.145, 0.827, 0.4, 0.72
-                            text_color: 1,1,1, 0.95
-                            icon_color:  1,1,1, 0.95
-                            blod:True
-                            theme_text_color: "Custom"
-
-                            # Position
-                            pos_hint: {"center_x": 0.53}
-
-                    # STATUS COLUMN
-                    MDBoxLayout:
-                        orientation: "horizontal"
-                        spacing: dp(5)
-                        size_hint_y: None
-                        height: dp(50)
-                        #pos_hint: {"y": 1}
-                        padding: [dp(45), 0, 0, 0]
-
-                        # CLOCK ICON
-                        MDIcon:
-                            icon: "watch"
-                            theme_text_color: "Custom"
-                            text_color: 1, 1, 1, 0.8
-                            font_size: "29sp"
-                            size_hint: None, None
-                            size: dp(24), dp(24)
-                            pos_hint: {"y": 0.3}
-
-                        # CLOCK-IN TIME LABEL
-                        MDLabel:
-                            id: timer_label
-                            text: ""
-                            theme_text_color: "Secondary"
-                            font_style: "Body1"
-                            font_size: "14sp"
-                            text_color: 0.3, 0.3, 0.3, 1
-                            size_hint_y: None
-                            adaptive_size: True
-                            height: self.texture_size[1]
-                            valign: "middle"
-                            pos_hint: {"y": 0.4}
-                            
-                            
-                            
-<SettingsScreen@BoxLayout>:
-    orientation: "vertical"
-    MDLabel:
-        text: "Settings"
-        halign: "center"
-        font_style: "H4"
-        theme_text_color: "Custom"
-        text_color: 1, 1, 1, 1
-
-    MDRaisedButton:
-        text: "Back to Main"
-        pos_hint: {"center_x": 0.5}
-        on_release: app.root.current = "main"
+                        adaptive_size: True
+                        height: self.texture_size[1]
+                        valign: "middle"
+                        pos_hint: {"y": 0.4}
 """
 
 class MyWidget(BoxLayout):
