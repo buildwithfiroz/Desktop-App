@@ -28,11 +28,43 @@ from io import BytesIO
 import requests
 from kivy.core.audio import SoundLoader
 from kivy.animation import Animation
+from datetime import datetime
 from dotenv import load_dotenv
 
 load_dotenv()
 
 url = os.getenv('URL')
+
+
+
+
+def update_clock_in_status(user_cache, clocked_in=True):
+    user_cache["clocked_in"] = clocked_in
+    user_cache["clock_in_time"] = datetime.now().isoformat()
+    save_user_cache(user_cache)
+
+def update_login_log(user_cache):
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    logins = user_cache.get("logins", [])
+    
+    # Update today's login count or append new
+    for entry in logins:
+        if entry.get("date") == today_str:
+            entry["count"] += 1
+            break
+    else:
+        logins.append({"date": today_str, "count": 1})
+
+    user_cache["logins"] = logins
+
+    # Make sure clock_in_time & clocked_in are preserved or updated accordingly
+    if "clocked_in" not in user_cache:
+        user_cache["clocked_in"] = False
+    if "clock_in_time" not in user_cache:
+        user_cache["clock_in_time"] = ""
+
+    save_user_cache(user_cache)
+
 
 
 def update_remember_me(self, remember):
@@ -250,6 +282,8 @@ class Notify(MDApp):
                 "password": password if remember_me else "",
                 "remember_me": remember_me
             }
+            update_clock_in_status(cache_data, clocked_in=True)
+            update_login_log(cache_data)
             save_user_cache(cache_data)
 
             # Launch popup

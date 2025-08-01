@@ -136,7 +136,7 @@ class NotifyPopupApp(MDApp):
         screen.ids.user_position.text = self.job_position
 
         # Close the app after 7 seconds of inactivity
-        Clock.schedule_once(self.close_application, 900)
+        Clock.schedule_once(self.close_application, 5)
         
         return screen
     

@@ -5,15 +5,16 @@
 
 This ***Desktop application*** is designed to streamline the login process for employees accessing the **Company CRM**, making it quicker and more efficient. Additionally, it provides a smart solution for time tracking, ensuring that employees never forget to clock in, thus improving both user experience and administrative tasks.
 
+Whether your team uses Windows, macOS, or Linux, this app ensures seamless login experiences with auto-start on boot and error-free time tracking — saving hours in administrative overhead and eliminating salary discrepancies due to missed clock-ins.
+
 
 > [!Tip] <h4>Key Features</h4>
 >
-> - ***Faster Login***: Achieves login times of 300-500ms, much faster than the typical
+> - ***Lightning-Fast Login***: Achieve login speeds up to 60% faster than typical browser/API workflows.
 700-900ms
-> - ***One-time Login***: After the first login, employees stay logged in with the
-"Remember Me" option.
-> - ***Employee Data Sync***: Fetches employee info (name, position, etc.) directly from
-the API.
+> - ***Secure One-Time Login***: Stay signed in after your first login using the "Remember Me" feature.
+> - ***Cross-Platform Desktop App***: Works flawlessly on Windows, macOS, and Linux.
+> - ***Automatic Startup***: App runs in the background after system boot - no manual launch needed.
 > - ***Automatic Startup***: The app runs automatically on system boot for seamless login
 
 
