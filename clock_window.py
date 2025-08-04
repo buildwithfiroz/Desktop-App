@@ -34,232 +34,6 @@ from kivymd.toast import toast
 from kivy.app import App
 from datetime import datetime, timedelta
 
-WEEKDAY_QUOTES = {
-        "New week, new models—let’s tune the future.",  # Monday
-        "Tuesday: crunch data, not coffee cups.",
-        "Mid-week magic—your code learns while you rest.",
-        "Thursday: almost the weekend, but the GPUs are still hot.",
-        "Friday finish-line—ship the build, own the weekend.",
-        "Monday commits set the tone—push the good vibes.",
-        "Tuesday bugs fear your debugger.",
-        "Wednesday: refactor with purpose.",
-        "Thursday—edge cases bow before you.",
-        "Friday deploy and disappear 🚀."},
-    # add more positions here …
-
-WEEKEND_QUOTES = [
-    "Weekend loading… time to recharge those neurons.",
-    "Fri-yay! Let the commits rest and the heart dance.",
-    "Saturday smiles and zero stand-ups.",
-    "Sunday reset—coffee, code, chill."
-]
-
-# ---------- LOGIN HISTORY UTILS ----------
-CACHE_FILE = "user_cache.json"
-
-
-class Attentions(Screen):
-    _year  = dt.date.today().year
-    _month = dt.date.today().month
-
-    def on_pre_enter(self):
-        self.refresh_calendar()          # current month on open
-
-    def refresh_calendar(self):
-        """Redraw grid for the current _year/_month."""
-        data   = load_user_cache()
-        logins = {entry.get("date") for entry in data.get("logins", []) if "date" in entry}
-
-
-        # month label
-        first = dt.date(self._year, self._month, 1)
-        month_days = (first.replace(month=self._month % 12 + 1, day=1)
-                      - dt.timedelta(days=1)).day
-        present_in_month = sum(
-            1 for d in range(1, month_days + 1)
-            if dt.date(self._year, self._month, d).isoformat() in logins
-        )
-        self.ids.month_summary.text = (
-            f"{first.strftime('%B %Y')} – {present_in_month} day(s) present"
-        )
-
-        # clear old widgets
-        grid = self.ids.calendar_grid
-        grid.clear_widgets()
-        
-
-        # weekday headers
-        for wd in ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]:
-            grid.add_widget(
-                Label(
-                    text=wd,
-                    bold=True,
-                    color=(.6, .6, .6, 1),
-                    size_hint=(None, None),
-                    size=(dp(40), dp(40)),
-                    padding=(0, dp(12)) 
-                )
-            )
-
-
-        # padding before 1st
-        start_wd = first.weekday()  # 0 = Monday
-        for _ in range(start_wd):
-            grid.add_widget(Label())
-
-        # day cells
-        for d in range(1, month_days + 1):
-            iso = dt.date(self._year, self._month, d).isoformat()
-            mark = iso in logins
-            bg = (0.2, 0.7, 0.3, 0.9) if mark else (0.1, 0.1, 0.1, 0.7)
-
-            day_lbl = Label(
-                text=str(d),
-                color=(1,1,1,1) if mark else (.8,.8,.8,1),
-                bold=mark,
-                size_hint_y=None,
-                height=dp(36),          # uniform height
-                padding=(dp(6), dp(6))  # internal padding
-            )
-            with day_lbl.canvas.before:
-                Color(*bg)
-                Rectangle(pos=day_lbl.pos, size=day_lbl.size)
-            day_lbl.bind(size=lambda w, _: setattr(w.canvas.before.children[-1], 'size', w.size),
-                        pos=lambda w, _: setattr(w.canvas.before.children[-1], 'pos', w.pos))
-            self.ids.calendar_grid.add_widget(day_lbl)
-            
-        
-        
-        
-load_dotenv()
-
-
-clock_in_url = os.getenv('URL')
-reset_hour = int(os.getenv("RESET_HOUR", 8))      # fallback to 8
-reset_minute = int(os.getenv("RESET_MINUTE", 59)) # fallback to 59
-
-
-
-
-
-
-def save_user_cache(data):
-    with open(CACHE_FILE, "w") as f:
-        json.dump(data, f, indent=4)
-        
-        
-def prune_old_logins(logins, keep_days=30):
-    cutoff = (dt.datetime.utcnow() - dt.timedelta(days=keep_days)).date().isoformat()
-    return [entry for entry in logins if entry.get("date", "") >= cutoff]
-
-
-def days_since_last_login(logins):
-    if not logins:
-        return None
-    dates = [entry.get("date") for entry in logins if "date" in entry]
-    if not dates:
-        return None
-    last = dt.datetime.fromisoformat(max(dates)).date()
-    return (dt.date.today() - last).days
-
-
-
-
-def update_env_var(key, value, env_path=".env"):
-    from dotenv import dotenv_values
-
-    # Read current env
-    current_env = dotenv_values(env_path)
-
-    # Overwrite or add the key
-    current_env[key] = value
-
-    # Write back
-    with open(env_path, "w") as f:
-        for k, v in current_env.items():
-            f.write(f"{k}={v}\n")
-
-
-def load_user_cache():
-    if not os.path.exists(CACHE_FILE):
-        return {}
-    with open(CACHE_FILE, "r") as f:
-        return json.load(f)
-
-user_cache = load_user_cache()
-
-
-
-
-def on_clock_in_button_press():
-    username = user_cache.get("username")
-    password = user_cache.get("password")
-
-    if not username or not password:
-        print("No saved credentials found. Please login again.")
-        return
-
-    app_ref = App.get_running_app()
-
-
-    def clock_in_task(app):
-        
-        user_cache["clocked_in"] = True
-        user_cache["clock_in_time"] = datetime.now().isoformat()
-        save_user_cache(user_cache)
-
-        
-        
-        
-        try:
-            session = create_session()
-            data, duration, _ = clock_in(session, username, password, clock_in_url)
-
-            if not data:
-                raise ValueError("Empty or invalid response from server")
-
-            # --- SUCCESS PATH ---
-            print(f"✅ Clock-in succeeded in {duration:.2f}s: {data}")
-            
-            
-            if hasattr(app, 'clock_label_event') and app.clock_label_event:
-                app.clock_label_event.cancel()
-                app.clock_label_event = None
-
-            # Reset and start timer
-            app.timer_seconds = 0
-            app.timer_event = Clock.schedule_interval(app.update_timer, 1)
-
-            # Set clocked-in state
-            app.clocked_in = True
-
-
-        except Exception as e:
-            # --- FAILURE PATH ---
-            Clock.schedule_once(lambda _: toast("Server error!"))
-            print(f"❌ Clock-in failed: {e}")
-
-            # show error label
-            Clock.schedule_once(lambda _: toast("Server Error"))
-
-
-            # re-enable the clock-in button immediately
-            Clock.schedule_once(
-                lambda _: setattr(
-                    app.root.get_screen('clock').ids.check_in_button, 'disabled', False
-                )
-            )
-            Clock.schedule_once(
-                lambda _: setattr(
-                    app.root.get_screen('clock').ids.check_in_button,
-                    'md_bg_color',
-                    (0.145, 0.827, 0.4, 0.72)
-                )
-            )
-
-    threading.Thread(target=lambda: clock_in_task(app_ref), daemon=True).start()
-
-
 
 
 KV = """
@@ -575,6 +349,237 @@ ScreenManager:
                 height: self.minimum_height
 """
 
+
+
+WEEKDAY_QUOTES = {
+        "New week, new models—let’s tune the future.",  # Monday
+        "Tuesday: crunch data, not coffee cups.",
+        "Mid-week magic—your code learns while you rest.",
+        "Thursday: almost the weekend, but the GPUs are still hot.",
+        "Friday finish-line—ship the build, own the weekend.",
+        "Monday commits set the tone—push the good vibes.",
+        "Tuesday bugs fear your debugger.",
+        "Wednesday: refactor with purpose.",
+        "Thursday—edge cases bow before you.",
+        "Friday deploy and disappear 🚀."},
+    # add more positions here …
+
+WEEKEND_QUOTES = [
+    "Weekend loading… time to recharge those neurons.",
+    "Fri-yay! Let the commits rest and the heart dance.",
+    "Saturday smiles and zero stand-ups.",
+    "Sunday reset—coffee, code, chill."
+]
+
+# ---------- LOGIN HISTORY UTILS ----------
+CACHE_FILE = "user_cache.json"
+
+
+class Attentions(Screen):
+    _year  = dt.date.today().year
+    _month = dt.date.today().month
+
+    def on_pre_enter(self):
+        self.refresh_calendar()          # current month on open
+
+    def refresh_calendar(self):
+        """Redraw grid for the current _year/_month."""
+        data   = load_user_cache()
+        logins = {entry.get("date") for entry in data.get("logins", []) if "date" in entry}
+
+
+        # month label
+        first = dt.date(self._year, self._month, 1)
+        month_days = (first.replace(month=self._month % 12 + 1, day=1)
+                      - dt.timedelta(days=1)).day
+        present_in_month = sum(
+            1 for d in range(1, month_days + 1)
+            if dt.date(self._year, self._month, d).isoformat() in logins
+        )
+        self.ids.month_summary.text = (
+            f"{first.strftime('%B %Y')} – {present_in_month} day(s) present"
+        )
+
+        # clear old widgets
+        grid = self.ids.calendar_grid
+        grid.clear_widgets()
+        
+
+        # weekday headers
+        for wd in ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]:
+            grid.add_widget(
+                Label(
+                    text=wd,
+                    bold=True,
+                    color=(.6, .6, .6, 1),
+                    size_hint=(None, None),
+                    size=(dp(40), dp(40)),
+                    padding=(0, dp(12)) 
+                )
+            )
+
+
+        # padding before 1st
+        start_wd = first.weekday()  # 0 = Monday
+        for _ in range(start_wd):
+            grid.add_widget(Label())
+
+        # day cells
+        for d in range(1, month_days + 1):
+            iso = dt.date(self._year, self._month, d).isoformat()
+            mark = iso in logins
+            bg = (0.2, 0.7, 0.3, 0.9) if mark else (0.1, 0.1, 0.1, 0.7)
+
+            day_lbl = Label(
+                text=str(d),
+                color=(1,1,1,1) if mark else (.8,.8,.8,1),
+                bold=mark,
+                size_hint_y=None,
+                height=dp(36),          # uniform height
+                padding=(dp(6), dp(6))  # internal padding
+            )
+            with day_lbl.canvas.before:
+                Color(*bg)
+                Rectangle(pos=day_lbl.pos, size=day_lbl.size)
+            day_lbl.bind(size=lambda w, _: setattr(w.canvas.before.children[-1], 'size', w.size),
+                        pos=lambda w, _: setattr(w.canvas.before.children[-1], 'pos', w.pos))
+            self.ids.calendar_grid.add_widget(day_lbl)
+            
+        
+        
+        
+load_dotenv()
+
+
+clock_in_url = os.getenv('URL')
+reset_hour = int(os.getenv("RESET_HOUR", 8))      # fallback to 8
+reset_minute = int(os.getenv("RESET_MINUTE", 59)) # fallback to 59
+
+
+
+
+
+
+def save_user_cache(data):
+    with open(CACHE_FILE, "w") as f:
+        json.dump(data, f, indent=4)
+        
+        
+def prune_old_logins(logins, keep_days=30):
+    cutoff = (dt.datetime.utcnow() - dt.timedelta(days=keep_days)).date().isoformat()
+    return [entry for entry in logins if entry.get("date", "") >= cutoff]
+
+
+def days_since_last_login(logins):
+    if not logins:
+        return None
+    dates = [entry.get("date") for entry in logins if "date" in entry]
+    if not dates:
+        return None
+    last = dt.datetime.fromisoformat(max(dates)).date()
+    return (dt.date.today() - last).days
+
+
+
+
+def update_env_var(key, value, env_path=".env"):
+    from dotenv import dotenv_values
+
+    # Read current env
+    current_env = dotenv_values(env_path)
+
+    # Overwrite or add the key
+    current_env[key] = value
+
+    # Write back
+    with open(env_path, "w") as f:
+        for k, v in current_env.items():
+            f.write(f"{k}={v}\n")
+
+
+def load_user_cache():
+    if not os.path.exists(CACHE_FILE):
+        return {}
+    with open(CACHE_FILE, "r") as f:
+        return json.load(f)
+
+user_cache = load_user_cache()
+
+
+
+
+def on_clock_in_button_press():
+    username = user_cache.get("username")
+    password = user_cache.get("password")
+
+    if not username or not password:
+        print("No saved credentials found. Please login again.")
+        return
+
+    app_ref = App.get_running_app()
+
+    def clock_in_task(app):
+        try:
+            session = create_session()
+            data, duration, _ = clock_in(session, username, password, clock_in_url)
+
+            if not data:
+                raise ValueError("Empty or invalid response from server")
+
+            # --- SUCCESS PATH ---
+            print(f"✅ Clock-in succeeded in {duration:.2f}s: {data}")
+
+            # Update clocked-in state and time
+            user_cache["clocked_in"] = True
+            user_cache["clock_in_time"] = datetime.now().isoformat()
+
+            # Record today's login
+            today = dt.date.today().isoformat()
+            logins = user_cache.get("logins", [])
+
+            # Convert to dict for fast lookup
+            logins_dict = {entry["date"]: entry for entry in logins if "date" in entry}
+
+            if today in logins_dict:
+                logins_dict[today]["count"] += 1
+            else:
+                logins_dict[today] = {"date": today, "count": 1}
+
+            # Save updated logins
+            user_cache["logins"] = sorted(logins_dict.values(), key=lambda x: x["date"])
+            save_user_cache(user_cache)
+
+            # Timer and UI updates
+            if hasattr(app, 'clock_label_event') and app.clock_label_event:
+                app.clock_label_event.cancel()
+                app.clock_label_event = None
+
+            app.timer_seconds = 0
+            app.timer_event = Clock.schedule_interval(app.update_timer, 1)
+            app.clocked_in = True
+
+        except Exception as e:
+            # --- FAILURE PATH ---
+            Clock.schedule_once(lambda _: toast("Server error!"))
+            print(f"❌ Clock-in failed: {e}")
+
+            # UI fallback
+            Clock.schedule_once(
+                lambda _: setattr(
+                    app.root.get_screen('clock').ids.check_in_button, 'disabled', False
+                )
+            )
+            Clock.schedule_once(
+                lambda _: setattr(
+                    app.root.get_screen('clock').ids.check_in_button,
+                    'md_bg_color',
+                    (0.145, 0.827, 0.4, 0.72)
+                )
+            )
+
+    threading.Thread(target=lambda: clock_in_task(app_ref), daemon=True).start()
+
+
 class ClockScreen(Screen):
     pass
 
@@ -701,9 +706,6 @@ class MsgApp(MDApp):
         self.clock_label_event = Clock.schedule_interval(self.update_clock_label, 1)
 
     # other logic ...
-
-
-        
         # 1. record today’s login
     
         logins = user_cache.setdefault("logins", [])
