@@ -623,7 +623,7 @@ class MsgApp(MDApp):
         Window.size = (350, 580)
         Window.minimum_size = Window.size
         Window.top = 50
-        Window.left = 990
+        Window.left = 890
         Window.title = "MCRM"
         self.theme_cls.theme_style = "Dark"
         self.theme_cls.primary_palette = "DeepPurple"
