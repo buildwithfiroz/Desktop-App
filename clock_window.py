@@ -622,8 +622,25 @@ class MsgApp(MDApp):
         self.title = 'MCRM'
         Window.size = (350, 580)
         Window.minimum_size = Window.size
-        Window.top = 50
-        Window.left = 890
+        # Window.top = 50
+        # Window.left = 890
+        
+        # Only works on desktop platforms (not mobile)
+        if platform in ('win', 'linux', 'macosx'):
+            from kivy.core.window import Window
+            import ctypes
+
+            # Get screen resolution
+            user32 = ctypes.windll.user32
+            screen_width = user32.GetSystemMetrics(0)
+            screen_height = user32.GetSystemMetrics(1)
+
+            # Center window
+            Window.left = int((screen_width - Window.width) / 2)
+            Window.top = int((screen_height - Window.height) / 2)
+            
+        
+        
         Window.title = "MCRM"
         self.theme_cls.theme_style = "Dark"
         self.theme_cls.primary_palette = "DeepPurple"
