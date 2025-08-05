@@ -29,6 +29,7 @@ from kivy.core.audio import SoundLoader
 from kivy.animation import Animation
 from datetime import datetime
 from dotenv import load_dotenv
+from kivymd.toast import toast
 
 load_dotenv()
 
@@ -134,6 +135,28 @@ class CustomScreen(Screen):
 
 class Notify(MDApp):
     
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.failed_login_attempts = 0
+        self.locked_out = False
+        self.dialog_open = False 
+        
+        
+    def on_password_enter(self):
+        if self.locked_out:
+            return
+
+        screen = self.sm.get_screen('Login')
+        user_field = screen.ids.user
+        pass_field = screen.ids.pass_s
+
+        username = user_field.text.strip()
+        password = pass_field.text.strip()
+
+        if len(username) >= 3 and len(password) >= 3:
+            self.check_credentials()
+
+    
     def update_remember_me(self, remember):
         """Update the remember me state in the UI and cache"""
         screen = self.sm.get_screen('Login')
@@ -146,11 +169,12 @@ class Notify(MDApp):
             
             
     def on_key_down(self, window, key, scancode, codepoint, modifiers):
-        if key == 9:  # Tab key
-            screen = self.sm.get_screen('Login')
-            user_field = screen.ids.user
-            pass_field = screen.ids.pass_s
+        screen = self.sm.get_screen('Login')
+        user_field = screen.ids.user
+        pass_field = screen.ids.pass_s
+        login_button = screen.ids.login_button
 
+        if key == 9:  # Tab key
             if user_field.focus:
                 user_field.focus = False
                 pass_field.focus = True
@@ -160,17 +184,29 @@ class Notify(MDApp):
                 user_field.focus = True
                 return True
 
-        elif key == 13:  
-            screen = self.sm.get_screen('Login')
-            username = screen.ids.user.text.strip()
-            password = screen.ids.pass_s.text.strip()
+        elif key == 13:  # Enter key
+            # If dialog is open, send enter to dialog's OK button
+            if self.dialog_open:
+                if hasattr(self, 'dialog') and self.dialog:
+                    # Simulate OK button press on Enter
+                    for btn in self.dialog.buttons:
+                        btn.trigger_action(duration=0)
+                    return True
 
-            # Only login if both fields are filled
-            if screen.ids.pass_s.focus and len(username) >= 3 and len(password) >= 3:
+            # Block login if locked out or button invisible
+            if self.locked_out or login_button.opacity == 0:
+                return True  # ignore enter key
+
+            username = user_field.text.strip()
+            password = pass_field.text.strip()
+
+            if pass_field.focus and len(username) >= 3 and len(password) >= 3:
                 self.check_credentials()
                 return True
 
         return False
+
+
 
 
             
@@ -343,68 +379,100 @@ class Notify(MDApp):
     
     def check_credentials(self):
         screen = self.sm.get_screen('Login')
-        
-        
-        # Hide the login button and show the loader
         login_button = screen.ids.login_button
         login_button.disabled = True
-        login_button.opacity = 0  # Hide the button
-
-        self.show_loader()  # Show the full-screen loader
+        login_button.opacity = 0
+        self.show_loader()
 
         username = screen.ids.user.text
         password = screen.ids.pass_s.text
-        
 
-        # Start the time measurement for progress
         start_time = time.time()
 
-        # Function to update the loader dynamically based on elapsed time
         def update_progress_simulation(dt):
-            elapsed_time = time.time() - start_time  # Get the elapsed time
-            total_time = 5  # Estimated total time in seconds (you can adjust this based on your network speed or expected duration)
-
-            # Calculate the percentage of completion based on elapsed time
+            elapsed_time = time.time() - start_time
+            total_time = 5
             progress_percentage = (elapsed_time / total_time) * 100
-            progress_percentage = min(progress_percentage, 100)  # Cap at 100%
-
-            # Update progress bar dynamically
+            progress_percentage = min(progress_percentage, 100)
             if not self.update_loader_progress(increment=progress_percentage):
-                return False  # Stop updating progress once it's complete
+                return False
+            return True
 
-            return True  # Keep updating
-
-        # Call this function every 0.1 seconds to update the progress bar
         update_progress_event = Clock.schedule_interval(update_progress_simulation, 0.1)
 
         def on_login_success(result_data):
             from kivymd.toast import toast
             toast(f"Login successful in {result_data.get('duration', 0):.2f}s")
-
-            # Show the login button back
+            self.failed_login_attempts = 0  # Reset counter on success
             login_button.opacity = 1
             login_button.disabled = False
-            self.hide_loader()  # Hide loader
+            self.hide_loader()
             self.login_success_ui(result_data)
-
-            # Stop the progress simulation once the login is successful
             Clock.unschedule(update_progress_event)
+            
+        
 
         def on_login_error(e):
             print(f"Login failed: {str(e)}")
-            
             if self.error_sound:
                 self.error_sound.play()
 
+            screen = self.sm.get_screen('Login')
+            login_button = screen.ids.login_button
+            retry_label = screen.ids.retry_label  # ✅ Reference to retry label
 
-            # Show the login button back
-            login_button.opacity = 1
-            login_button.disabled = False
-            self.show_error_dialog("unauthorized")
-            self.hide_loader()  # Hide loader
+            self.failed_login_attempts += 1
 
-            # Stop the progress simulation once the login fails
-            Clock.unschedule(update_progress_event)
+            def show_error_after_delay(dt):
+                self.locked_out = False
+                login_button.disabled = False
+                login_button.opacity = 1
+                retry_label.text = ""
+                retry_label.opacity = 0
+                self.hide_loader()
+                self.show_error_dialog("unauthorized")
+                Clock.unschedule(update_progress_event)
+
+            def start_retry_countdown(seconds=10):  # ✅ Countdown logic
+                retry_label.opacity = 1
+                retry_label.text = f"[color=#FF0000]Try again in {seconds} seconds[/color]"
+                login_button.disabled = True
+                login_button.opacity = 0
+
+                def update_label(dt):
+                    nonlocal seconds
+                    seconds -= 1
+                    if seconds > 0:
+                        retry_label.text = f"[color=#FF0000]Try again in {seconds} seconds[/color]"
+                    else:
+                        retry_label.opacity = 0
+                        login_button.disabled = False
+                        login_button.opacity = 1
+                        return False  # Stop the Clock
+                    return True
+
+                Clock.schedule_interval(update_label, 1)
+
+            if self.failed_login_attempts > 3:
+                self.locked_out = True
+                toast("Please wait 10 seconds before trying again.")
+                login_button.disabled = True
+                login_button.opacity = 0
+
+                # Reset progress bar if any
+                loader = screen.ids.get("loader_overlay")
+                if loader and hasattr(loader, 'ids'):
+                    progress_bar = loader.ids.get('loader_overlay')
+                    if progress_bar:
+                        progress_bar.value = 0
+
+                Clock.unschedule(update_progress_event)
+                start_retry_countdown(10)  # ✅ Start countdown
+            else:
+                show_error_after_delay(0)
+
+
+
 
         def login_thread():
             try:
@@ -421,6 +489,7 @@ class Notify(MDApp):
 
 
 
+
     def show_error_dialog(self, reason="unknown"):
         error_messages = {
             "unauthorized": "Incorrect username or password. Please try again.",
@@ -429,11 +498,17 @@ class Notify(MDApp):
             "unknown": "Login failed. Please try again."
         }
 
+        def on_dialog_dismiss(instance):
+            self.dialog_open = False
+
         self.dialog = MDDialog(
             text=error_messages.get(reason, error_messages["unknown"]),
-            buttons=[MDFlatButton(text="OK", on_release=self.dismiss_dialog)]
+            buttons=[MDFlatButton(text="OK", on_release=lambda x: self.dialog.dismiss())]
         )
+        self.dialog.bind(on_dismiss=on_dialog_dismiss)
+        self.dialog_open = True
         self.dialog.open()
+
 
 
 if __name__ == "__main__":

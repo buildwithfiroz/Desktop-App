@@ -136,6 +136,7 @@ MDScreen:
                             size_hint: 1, None
                             height: dp(50)
                             password: True
+                            on_text_validate: app.on_password_enter()
                             on_text: app.check_input_length()
                             multiline: False
 
@@ -149,6 +150,8 @@ MDScreen:
                                 pass_s.password = not pass_s.password
                                 icon_button.icon = "eye-off" if pass_s.password else "eye"
                             x: pass_s.right - self.width - dp(10)
+
+                    
 
                     # Remember Me
                     MDBoxLayout:
@@ -175,6 +178,17 @@ MDScreen:
                             on_touch_down:
                                 if self.collide_point(*args[1].pos): \
                                 root.ids.remember_me_checkbox.active = not root.ids.remember_me_checkbox.active
+
+
+                    MDLabel:
+                        id: retry_label
+                        text: ""
+                        theme_text_color: "Error"
+                        halign: "center"
+                        markup: True
+                        font_style: "Subtitle1"
+                        opacity: 0  # Hidden by default
+                        pos_hint: {"top": 0.9}
 
                     # Login Button
                     MDRaisedButton:
