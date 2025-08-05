@@ -160,7 +160,7 @@ class Notify(MDApp):
                 user_field.focus = True
                 return True
 
-        elif key == 13:  # Enter key
+        elif key == 13:  
             screen = self.sm.get_screen('Login')
             username = screen.ids.user.text.strip()
             password = screen.ids.pass_s.text.strip()
