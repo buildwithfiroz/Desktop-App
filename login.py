@@ -11,7 +11,6 @@ import time
 import json
 from kivy.core.window import Window
 from kivy.clock import Clock
-from kivy.animation import Animation
 from kivymd.app import MDApp
 from kivy.lang.builder import Builder
 from kivy.uix.screenmanager import ScreenManager, Screen, NoTransition, FadeTransition
@@ -66,10 +65,6 @@ def update_login_log(user_cache):
     save_user_cache(user_cache)
 
 
-
-def update_remember_me(self, remember):
-    screen = self.sm.get_screen('Login')
-    screen.ids.remember_me_checkbox.active = remember
 
 def download_and_optimize_image(url: str, save_path: str, quality: int = 85) -> bool:
     try:
@@ -155,6 +150,10 @@ class Notify(MDApp):
         self.theme_cls.primary_palette = "DeepPurple"
         Window.borderless = True
         Window.fullscreen = 'auto'
+        
+        # Preload sounds once
+        self.success_sound = SoundLoader.load('./src/audio/ting.mp3') or None
+        self.error_sound = SoundLoader.load('./src/audio/delete.mp3') or None
 
         self.sm = ScreenManager(transition=FadeTransition(duration=0.2))
         self.sm.add_widget(Builder.load_file("./Kv/splash.kv"))
@@ -252,9 +251,10 @@ class Notify(MDApp):
   
 
     def login_success_ui(self, data):
-        sound = SoundLoader.load('./src/audio/ting.mp3')
-        if sound:
-            sound.play()
+        
+        if self.success_sound:
+            self.success_sound.play()
+            
         firstname = data.get("full_name", "User")  # Updated to full name
         job_position = data.get("job_position", "Staff")  # ✅ Add this line
         profile_thumb_url = data.get("profile_thumb", "src/img/logo.png")
@@ -291,7 +291,6 @@ class Notify(MDApp):
 
             # Exit current app
             self.stop()
-            sys.exit(0)
 
         def background_image_worker():
             print(f"[🔁 Downloading profile image from: {profile_thumb_url}]")
@@ -362,9 +361,9 @@ class Notify(MDApp):
         def on_login_error(e):
             print(f"Login failed: {str(e)}")
             
-            sound = SoundLoader.load('./src/audio/delete.mp3')
-            if sound:
-                sound.play()
+            if self.error_sound:
+                self.error_sound.play()
+
 
             # Show the login button back
             login_button.opacity = 1
