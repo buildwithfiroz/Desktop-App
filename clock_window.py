@@ -821,16 +821,21 @@ class MsgApp(MDApp):
         self.password_dialog.open()
 
     def dismiss_password_dialog(self, *args):
+        self.password_text_field.text = ""  # Clear input
         self.password_dialog.dismiss()
+
 
     def verify_password_dialog(self, *args):
         entered_pass = self.password_text_field.text
+        self.password_text_field.text = ""  # Clear input
+
         if entered_pass == self.admin_pass:
             self.password_dialog.dismiss()
             self.show_software_update_screen()
         else:
             self.password_dialog.dismiss()
             self.show_error_dialog("Incorrect password!")
+
 
     def show_error_dialog(self, message):
         if not self.error_dialog:
