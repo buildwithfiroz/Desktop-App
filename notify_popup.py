@@ -122,7 +122,7 @@ class NotifyPopupApp(MDApp):
         Window.size = [400, 100]
         self.title = ''
         Window.top = 50
-        Window.left = 990
+        Window.left = 850
         self.theme_cls.theme_style = "Dark"
         self.theme_cls.primary_palette = "DeepPurple"
 
