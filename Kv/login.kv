@@ -121,6 +121,7 @@ MDScreen:
                         size_hint_y: None
                         height: dp(50)
                         on_text: app.check_input_length()
+                        focus: True 
 
                     # Password + Eye Toggle
                     RelativeLayout:
@@ -136,6 +137,7 @@ MDScreen:
                             height: dp(50)
                             password: True
                             on_text: app.check_input_length()
+                            multiline: False
 
                         MDIconButton:
                             id: icon_button

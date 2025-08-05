@@ -145,12 +145,44 @@ class Notify(MDApp):
             save_user_cache(cache_data)
             
             
+    def on_key_down(self, window, key, scancode, codepoint, modifiers):
+        if key == 9:  # Tab key
+            screen = self.sm.get_screen('Login')
+            user_field = screen.ids.user
+            pass_field = screen.ids.pass_s
+
+            if user_field.focus:
+                user_field.focus = False
+                pass_field.focus = True
+                return True
+            elif pass_field.focus:
+                pass_field.focus = False
+                user_field.focus = True
+                return True
+
+        elif key == 13:  # Enter key
+            screen = self.sm.get_screen('Login')
+            username = screen.ids.user.text.strip()
+            password = screen.ids.pass_s.text.strip()
+
+            # Only login if both fields are filled
+            if screen.ids.pass_s.focus and len(username) >= 3 and len(password) >= 3:
+                self.check_credentials()
+                return True
+
+        return False
+
+
+            
+            
     def build(self):
         self.theme_cls.theme_style = "Dark"
         self.theme_cls.primary_palette = "DeepPurple"
         Window.borderless = True
         Window.fullscreen = 'auto'
         
+        Window.bind(on_key_down=self.on_key_down)
+
         # Preload sounds once
         self.success_sound = SoundLoader.load('./src/audio/ting.mp3') or None
         self.error_sound = SoundLoader.load('./src/audio/delete.mp3') or None
