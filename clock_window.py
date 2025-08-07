@@ -13,6 +13,7 @@ from kivy.clock import Clock
 from kivy.uix.boxlayout import BoxLayout
 import json
 import os
+import random
 from datetime import datetime
 from logic.logic import create_session, clock_in
 import threading
@@ -20,7 +21,6 @@ from kivy.uix.screenmanager import ScreenManager, Screen
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.button import MDFlatButton
 from kivymd.uix.textfield import MDTextField
-CACHE_FILE = "user_cache.json"
 from dotenv import load_dotenv
 import sys
 from kivymd.uix.pickers import MDDatePicker
@@ -33,27 +33,43 @@ from kivy.metrics import dp
 from kivymd.toast import toast
 from kivy.app import App
 from datetime import datetime, timedelta
+import logging
 
-WEEKDAY_QUOTES = {
-        "New week, new models—let’s tune the future.",  # Monday
-        "Tuesday: crunch data, not coffee cups.",
-        "Mid-week magic—your code learns while you rest.",
-        "Thursday: almost the weekend, but the GPUs are still hot.",
-        "Friday finish-line—ship the build, own the weekend.",
-        "Monday commits set the tone—push the good vibes.",
-        "Tuesday bugs fear your debugger.",
-        "Wednesday: refactor with purpose.",
-        "Thursday—edge cases bow before you.",
-        "Friday deploy and disappear 🚀."},
-    # add more positions here …
+
+
+
+load_dotenv()
+
+domain = os.getenv('ENDPOINT')
+
+
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+
+WEEKDAY_QUOTES = [
+    "New goals, new opportunities—let’s crush it!",
+    "Stay focused, the week is yours to conquer.",
+    "Midweek hustle—halfway to greatness.",
+    "Almost there, keep pushing forward.",
+    "Finish strong, reflect on your wins.",
+    "Kickstart the week with passion and purpose.",
+    "Turn challenges into stepping stones.",
+    "Progress isn’t perfection, it’s persistence.",
+    "Keep moving, success is just around the corner.",
+    "Celebrate small wins, they lead to big victories."
+]
 
 WEEKEND_QUOTES = [
     "Weekend loading… time to recharge those neurons.",
     "Fri-yay! Let the commits rest and the heart dance.",
     "Saturday smiles and zero stand-ups.",
-    "Sunday reset—coffee, code, chill."
+    "Sunday reset—coffee, code, chill.",
+    "Saturday: unplug to recharge for next week.",
+    "Sunday: reflect, reset, and restart."
 ]
-
 # ---------- LOGIN HISTORY UTILS ----------
 CACHE_FILE = "user_cache.json"
 
@@ -163,8 +179,6 @@ def days_since_last_login(logins):
     return (dt.date.today() - last).days
 
 
-
-
 def update_env_var(key, value, env_path=".env"):
     from dotenv import dotenv_values
 
@@ -189,9 +203,7 @@ def load_user_cache():
 user_cache = load_user_cache()
 
 
-
-
-def on_clock_in_button_press():
+def perform_clock_in_request():
     username = user_cache.get("username")
     password = user_cache.get("password")
 
@@ -220,6 +232,10 @@ def on_clock_in_button_press():
 
             # --- SUCCESS PATH ---
             print(f"✅ Clock-in succeeded in {duration:.2f}s: {data}")
+
+            # ✅ Update log and status *after* success
+            update_clock_in_status(user_cache)
+            update_login_log(user_cache)
             
             
             if hasattr(app, 'clock_label_event') and app.clock_label_event:
@@ -260,7 +276,33 @@ def on_clock_in_button_press():
     threading.Thread(target=lambda: clock_in_task(app_ref), daemon=True).start()
 
 
+def update_clock_in_status(user_cache, clocked_in=True):
+    user_cache.update({
+        "clocked_in": clocked_in,
+        "clock_in_time": datetime.now().isoformat()
+    })
+    save_user_cache(user_cache)
 
+def update_login_log(user_cache):
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    logins = user_cache.get("logins", [])
+    
+    for entry in logins:
+        if entry.get("date") == today_str:
+            entry["count"] += 1
+            break
+    else:
+        logins.append({"date": today_str, "count": 1})
+
+    user_cache["logins"] = logins
+
+    # Ensure keys exist
+    if "clocked_in" not in user_cache:
+        user_cache["clocked_in"] = False
+    if "clock_in_time" not in user_cache:
+        user_cache["clock_in_time"] = ""
+
+    save_user_cache(user_cache)
 
 KV = """
 ScreenManager:
@@ -386,8 +428,9 @@ ScreenManager:
                             font_size: "15sp"
                             padding: [dp(30),dp(10),dp(30),dp(10)]  # Top and bottom padding
                             on_release:
-                                app.on_clock_in_button_press()
                                 app.start_action()
+                                app.on_clock_in_button_press()
+                                
 
 
                             # Colors - soft whiteish-gre
@@ -589,6 +632,9 @@ class MsgApp(MDApp):
     error_dialog = None
     logout_dialog = None
 
+
+    
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.timer_seconds = 0
@@ -661,7 +707,6 @@ class MsgApp(MDApp):
                 clock_screen.ids.user_name.text = firstname
                 clock_screen.ids.profile_image.source = user_data.get("profile_thumb", "Wel.png")
 
-
             clocked_in = user_cache.get("clocked_in", False)
             clock_in_time_str = user_cache.get("clock_in_time")
 
@@ -700,16 +745,12 @@ class MsgApp(MDApp):
         # Continue with the rest of on_start...
         self.clock_label_event = Clock.schedule_interval(self.update_clock_label, 1)
 
-    # other logic ...
-        # 1. record today’s login
-    
+        # 1. Record today’s login
         logins = user_cache.setdefault("logins", [])
         logins = prune_old_logins(logins)
         user_cache["logins"] = logins
-        
 
-        # 2. pick quote
-
+        # 2. Pick quote based on last login and day of the week
         days = days_since_last_login(logins)
 
         if days is None:
@@ -723,24 +764,33 @@ class MsgApp(MDApp):
         else:
             quote = "Long time no see—welcome back to the grind!"
 
-        # weekday vs weekend override
-        weekday = dt.datetime.today().weekday()  # 0..6
+        # Weekday vs weekend override logic
+        weekday = datetime.today().weekday()  # 0..6
         if weekday >= 4:  # Friday after 12 pm -> weekend vibe
-            if weekday == 4 and dt.datetime.now().hour < 12:
+            if weekday == 4 and datetime.now().hour < 12:
                 pass  # keep weekday quote until noon
             else:
-                quote = WEEKEND_QUOTES[weekday - 4]
+                quote = random.choice(WEEKEND_QUOTES)  # Random weekend quote
+        else:
+            quote = random.choice(WEEKDAY_QUOTES)  # Random weekday quote
 
+        # Add motivational boost based on login days
+        if days is not None:
+            if days <= 3:
+                motivational_boost = "You're on fire—keep it up!"
+            elif days <= 7:
+                motivational_boost = "Consistency is key. Keep pushing!"
+            else:
+                motivational_boost = "Great progress! You're building momentum."
 
-        # 3. push to label
+            quote += f" {motivational_boost}"
+
+        # 3. Push to label
         clock_screen = self.root.get_screen("clock")
         clock_screen.ids.motivation_label.text = quote
-        
-        
-        
+
         # Bind keyboard
         Window.bind(on_key_down=self.on_key_down)
-
 
         # Pre-fill Software Update fields
         domain_field = self.root.get_screen("software_update").ids.domain_field
@@ -791,8 +841,11 @@ class MsgApp(MDApp):
     
     
     def on_clock_in_button_press(self):
-        # Call the provided function with threading
-        on_clock_in_button_press()
+        perform_clock_in_request()
+
+
+
+
 
     
     
