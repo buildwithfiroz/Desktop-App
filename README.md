@@ -1,22 +1,24 @@
 <h2 align="left" style="display: flex; align-items: center;">
-    CRM Login Desktop App
+   CRM Login Desktop App
 </h2>
 
 
-This ***Desktop application*** is designed to streamline the login process for employees accessing the **Company CRM**, making it quicker and more efficient. Additionally, it provides a smart solution for time tracking, ensuring that employees never forget to clock in, thus improving both user experience and administrative tasks.
+This cross-platform ***desktop application*** is designed to revolutionize employee login and time tracking for your Company CRM. By combining speed, automation, and smart admin tools, it eliminates wasted time, reduces errors, and ensures clock-ins are never missed again.
 
-Whether your team uses Windows, macOS, or Linux, this app ensures seamless login experiences with auto-start on boot and error-free time tracking — saving hours in administrative overhead and eliminating salary discrepancies due to missed clock-ins.
+Whether your team uses ***Windows, macOS, or Linux***, this app ensures seamless, secure, and lightning-fast logins — saving hours of administrative effort and preventing costly salary discrepancies.
 
 
 > [!Tip] <h4>Key Features</h4>
 >
-> - ***Lightning-Fast Login***: Achieve login speeds up to 60% faster than typical browser/API workflows.
-700-900ms
+> - ***Fast Login***: Login in just 300–500ms — up to 3× faster than traditional browser/API workflows.
 > - ***Secure One-Time Login***: Stay signed in after your first login using the "Remember Me" feature.
-> - ***Cross-Platform Desktop App***: Works flawlessly on Windows, macOS, and Linux.
-> - ***Automatic Startup***: App runs in the background after system boot - no manual launch needed.
-> - ***Automatic Startup***: The app runs automatically on system boot for seamless login
-
+> - ***Cross-Platform***: Works flawlessly on Windows, macOS, and Linux.
+> - ***Modular Panel (NEW!)***: Team leads/admins can update API endpoints, URLs, or system settings on the fly.
+> - ***Built-In Calendar***: Employees can view which days they’ve clocked in/out for easy tracking.
+> - ***Management***: Secure logout lets devices be reassigned to new users instantly.
+> - ***Quick Hotkeys***:
+>     - CTRL + S → Open Settings
+>     - CTRL + B → Go Back 
 
 
 <br>
@@ -101,10 +103,28 @@ Whether your team uses Windows, macOS, or Linux, this app ensures seamless login
    <img src="src/git/clock-in.png" alt="Desktop View" width="30%" />
     <br>
 
+4. **Admin Panel & Settings**
+    - Admins and team leaders get full control over system behavior via the built-in Admin Panel:
+
+    <img src="src/git/admin-general.png" alt="Desktop View" width="30%" />
 
 
-## 5. Summary  
-Watch this quick video to understand the simple workflow and how the app makes login and time tracking effortless.
+
+      - Update Endpoints & URLs
+      <br>
+      <img src="src/git/key-api.png" alt="Desktop View" width="30%" />
+      <br>
+      - Clock-In Calendar View
+      <br>
+      <img src="src/git/calendar.png" alt="Desktop View" width="30%" />
+      <br>
+      - Logout & Switch Users
+      <br>
+      <img src="src/git/logout.png" alt="Desktop View" width="30%" />
+      <br>
+
+## 5. Demo Video
+Watch this quick video to see the workflow in action:
 
 
 https://github.com/user-attachments/assets/9b7a71e2-a9ad-4ec1-88ee-ab9846043489
