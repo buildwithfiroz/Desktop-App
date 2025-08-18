@@ -104,11 +104,13 @@ Whether your team uses ***Windows, macOS, or Linux***, this app ensures seamless
     <br>
 
 4. **Admin Panel & Settings**
-
-<br>
-<p align="left">
-  <img src="src/git/admin-general.png" alt="Admin General" width="18%" />
-</p>
+> - ***Activate using***:
+>     - CTRL + S → Open Settings
+>     - CTRL + B → Go Back 
+>
+> <p align="left">
+>  <img src="src/git/admin-general.png" alt="Admin General" width="24%" />
+> </p>
 <br>
 <br>
 
