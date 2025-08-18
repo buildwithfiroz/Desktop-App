@@ -104,24 +104,41 @@ Whether your team uses ***Windows, macOS, or Linux***, this app ensures seamless
     <br>
 
 4. **Admin Panel & Settings**
-    - Admins and team leaders get full control over system behavior via the built-in Admin Panel:
 
-    <img src="src/git/admin-general.png" alt="Desktop View" width="30%" />
+<br>
+<p align="left">
+  <img src="src/git/admin-general.png" alt="Admin General" width="18%" />
+</p>
+<br>
+<br>
 
+Admins and team leaders get full control over system behavior via the built-in Admin Panel:
 
+<p align="center">
+  <table>
+    <tr>
+      <td align="center">
+        <img src="src/git/key-api.png" alt="API Settings" width="200px" /><br>
+        <sub>API Settings</sub>
+      </td>
+      <td align="center">
+        <img src="src/git/calendar.png" alt="Calendar View" width="200px" /><br>
+        <sub>Clock-In Calendar</sub>
+      </td>
+    </tr>
+    <tr>
+      <td align="center">
+        <img src="src/git/logout.png" alt="Logout" width="200px" /><br>
+        <sub>Logout & Switch Users</sub>
+      </td>
+      <td align="center">
+        <img src="src/git/admin-general.png" alt="General Settings" width="200px" /><br>
+        <sub>General Settings</sub>
+      </td>
+    </tr>
+  </table>
+</p>
 
-      - Update Endpoints & URLs
-      <br>
-      <img src="src/git/key-api.png" alt="Desktop View" width="30%" />
-      <br>
-      - Clock-In Calendar View
-      <br>
-      <img src="src/git/calendar.png" alt="Desktop View" width="30%" />
-      <br>
-      - Logout & Switch Users
-      <br>
-      <img src="src/git/logout.png" alt="Desktop View" width="30%" />
-      <br>
 
 ## 5. Demo Video
 Watch this quick video to see the workflow in action:
