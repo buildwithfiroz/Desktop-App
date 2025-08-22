@@ -1,3 +1,131 @@
+# ------------------------------------------------------------------
+# 0.  BOOTSTRAP & PERSISTENCE LAYER  (runs first)
+# ------------------------------------------------------------------
+import os, sys, json, subprocess, datetime, pathlib, threading, time
+import psutil
+
+TASK_NAME_BOOT = "NexgenoLogin_Boot"
+TASK_NAME_859  = "NexgenoLogin_859AM"
+EXE_PATH       = pathlib.Path(sys.executable if getattr(sys, 'frozen', False) else __file__).resolve()
+CACHE_FILE     = pathlib.Path(__file__).with_name("run_cache.json")
+LOG_FILE       = pathlib.Path(__file__).with_name("guardian.log")
+
+# ---------- tiny logger ----------
+def log(msg):
+    ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    line = f"[{ts}] {msg}\n"
+    print(line, end="")
+    with LOG_FILE.open("a") as f:
+        f.write(line)
+
+# ---------- cache ----------
+def load_cache():
+    try:
+        return json.loads(CACHE_FILE.read_text())
+    except Exception:
+        return {}
+
+def save_cache(d):
+    CACHE_FILE.write_text(json.dumps(d, indent=2))
+
+def already_ran_today():
+    return load_cache().get("last_run_date") == datetime.datetime.now().strftime("%Y-%m-%d")
+
+def stamp_today():
+    c = load_cache()
+    c["last_run_date"] = datetime.datetime.now().strftime("%Y-%m-%d")
+    save_cache(c)
+
+# ---------- task scheduler ----------
+SCHTASKS = os.path.join(os.environ["SYSTEMROOT"], "System32", "schtasks.exe")
+
+def task_exists(name):
+    return subprocess.run([SCHTASKS, "/Query", "/TN", name], capture_output=True).returncode == 0
+
+def install_tasks():
+    if task_exists(TASK_NAME_BOOT) and task_exists(TASK_NAME_859):
+        return
+    log("Installing scheduled tasks …")
+    boot_xml = f"""<?xml version="1.0" encoding="UTF-16"?>
+<Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <RegistrationInfo><Description>Nexgeno login – run at logon</Description></RegistrationInfo>
+  <Triggers><LogonTrigger><Enabled>true</Enabled></LogonTrigger></Triggers>
+  <Principals><Principal id="Author"><LogonType>InteractiveToken</LogonType><RunLevel>HighestAvailable</RunLevel></Principal></Principals>
+  <Settings>
+    <StartWhenAvailable>true</StartWhenAvailable><AllowStartIfOnBatteries>true</AllowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries><Enabled>true</Enabled>
+    <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
+    <RestartOnFailure><Interval>PT1M</Interval><Count>9999</Count></RestartOnFailure>
+  </Settings>
+  <Actions><Exec><Command>"{EXE_PATH}"</Command><Arguments>--trigger=boot</Arguments></Exec></Actions>
+</Task>"""
+
+    h859_xml = f"""<?xml version="1.0" encoding="UTF-16"?>
+<Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <RegistrationInfo><Description>Nexgeno login – daily 08:59</Description></RegistrationInfo>
+  <Triggers>
+    <CalendarTrigger>
+      <StartBoundary>2024-01-01T08:59:00</StartBoundary>
+      <Enabled>true</Enabled>
+      <ScheduleByDay><DaysInterval>1</DaysInterval></ScheduleByDay>
+    </CalendarTrigger>
+  </Triggers>
+  <Principals><Principal id="Author"><LogonType>InteractiveToken</LogonType><RunLevel>HighestAvailable</RunLevel></Principal></Principals>
+  <Settings>
+    <StartWhenAvailable>true</StartWhenAvailable><AllowStartIfOnBatteries>true</AllowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries><Enabled>true</Enabled>
+    <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
+    <RestartOnFailure><Interval>PT1M</Interval><Count>9999</Count></RestartOnFailure>
+  </Settings>
+  <Actions><Exec><Command>"{EXE_PATH}"</Command><Arguments>--trigger=859</Arguments></Exec></Actions>
+</Task>"""
+
+    for name, xml in ((TASK_NAME_BOOT, boot_xml), (TASK_NAME_859, h859_xml)):
+        tmp = pathlib.Path(os.environ["TEMP"]) / f"{name}.xml"
+        tmp.write_text(xml, encoding="utf-16")
+        subprocess.run([SCHTASKS, "/Create", "/F", "/TN", name, "/XML", str(tmp)], check=True)
+    log("Tasks installed.")
+
+# ---------- watchdog ----------
+def watchdog():
+    my_pid = os.getpid()
+    while True:
+        time.sleep(5)
+        if not psutil.pid_exists(my_pid):
+            log("Watchdog respawning …")
+            subprocess.Popen([str(EXE_PATH), "--trigger=watchdog"])
+            break
+
+# ---------- entry point ----------
+def bootstrap():
+    try:
+        install_tasks()
+    except Exception as e:
+        log(f"Task install failed: {e}")
+
+    # watchdog
+    threading.Thread(target=watchdog, daemon=True).start()
+
+    trigger = (sys.argv[1] if len(sys.argv) > 1 else "").lower()
+
+    if trigger == "--trigger=859":
+        if already_ran_today():
+            log("08:59 already executed today – exiting.")
+            sys.exit(0)
+        stamp_today()
+        log("08:59 trigger – launching GUI.")
+    elif trigger == "--trigger=boot":
+        log("Boot trigger – launching GUI.")
+    else:
+        log("Manual / unknown trigger – launching GUI.")
+
+    # fall through to GUI
+bootstrap()
+del bootstrap, install_tasks, task_exists, watchdog, stamp_today, already_ran_today, save_cache, load_cache, log, SCHTASKS, CACHE_FILE, LOG_FILE, EXE_PATH, TASK_NAME_BOOT, TASK_NAME_859
+
+
+
+
 from kivy.config import Config
 
 # Must be set before importing any Kivy modules
