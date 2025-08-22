@@ -17,6 +17,7 @@ kivy-garden.frostedglass==0.5.0
 kivymd==1.2.0
 pillow==11.3.0
 plyer==2.1.0
+psutil==7.0.0
 Pygments==2.19.2
 pync==2.0.3
 python-dateutil==2.9.0.post0
