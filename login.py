@@ -125,12 +125,12 @@ del bootstrap, install_tasks, task_exists, watchdog, stamp_today, already_ran_to
 
 
 
-
 from kivy.config import Config
 
 # Must be set before importing any Kivy modules
 Config.set('graphics', 'resizable', '0')
 Config.set('graphics', 'borderless', '0')
+Config.set('kivy','window_icon','logo.ico')
 
 # login.py
 import os
@@ -146,8 +146,6 @@ from kivymd.uix.dialog import MDDialog
 from kivymd.uix.button import MDFlatButton
 from threading import Thread
 from multiprocessing import Process, freeze_support
-from notify_popup import NotifyPopupApp  # Popup app
-from logic.logic import logic_main
 from clock_window import MsgApp  # Main clock app
 import subprocess
 from PIL import Image
@@ -158,11 +156,551 @@ from kivy.animation import Animation
 from datetime import datetime
 from dotenv import load_dotenv
 from kivymd.toast import toast
+import requests
+import time
+import socket
+import logging
+from requests.adapters import HTTPAdapter, Retry
+from datetime import datetime
+from dotenv import load_dotenv
+import os 
+from datetime import datetime
+
+
+load_dotenv()
+
+domain = os.getenv('ENDPOINT')
+
+
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+
+def create_session() -> requests.Session:
+    session = requests.Session()
+    retries = Retry(
+        total=3,
+        backoff_factor=0.3,
+        status_forcelist=[429, 500, 502, 503, 504],
+        allowed_methods={"HEAD", "GET", "OPTIONS", "POST"}
+    )
+    adapter = HTTPAdapter(max_retries=retries, pool_connections=10, pool_maxsize=10)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+    session.headers['Expect'] = ''
+    session.headers['User-Agent'] = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1)'
+    return session
+
+
+def warm_up_connection(session: requests.Session, base_url: str, timeout: float = 2.0):
+    try:
+        response = session.head(base_url, timeout=timeout)
+        response.raise_for_status()
+        logger.info("Warm-up connection succeeded (HEAD)")
+    except requests.RequestException:
+        try:
+            response = session.get(base_url, timeout=timeout)
+            response.raise_for_status()
+            logger.info("Warm-up connection succeeded (GET)")
+        except Exception as e:
+            logger.warning(f"Warm-up connection failed: {e}")
+
+
+def login_optimized(session: requests.Session, username: str, password: str, url: str, timeout: float = 5.0):
+    payload = {"email": username, "password": password}
+    headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json, text/plain, */*',
+        'Connection': 'keep-alive',
+        'Accept-Encoding': 'gzip, deflate'
+    }
+
+    start_time = time.perf_counter()
+    response = session.post(url, json=payload, headers=headers, timeout=timeout)
+    response.raise_for_status()
+    elapsed = time.perf_counter() - start_time
+
+    data = response.json()
+    if not data.get("status", False):
+        raise ValueError(f"Login failed: {data.get('message', 'Unknown error')}")
+
+    return data, elapsed, response.text
+
+
+def logic_main(url: str, username: str, password: str):
+    try:
+        socket.gethostbyname(f"{domain}")
+    except socket.gaierror as e:
+        logger.error(f"DNS resolution failed: {e}")
+        return None
+
+    session = create_session()
+    logger.info("⏱️ Warming up connection...")
+    warm_up_connection(session, f"https://{domain}/")
+
+    try:
+        data, duration, _ = login_optimized(session, username, password, url)
+        logger.info(f"✅ Login succeeded in {duration:.4f} seconds.")
+
+        # Extracting values from response
+        firstname = data.get("firstname", "")
+        lastname = data.get("lastname", "")
+        full_name = f"{firstname} {lastname}".strip()
+        thumb_url = data.get("profile_thumb")
+        job_position = data.get("job_position")
+
+        checkin_time_str = data.get("checkin", {}).get("datetime")
+        checkin_time_fmt = None
+
+        if checkin_time_str:
+            try:
+                dt_obj = datetime.strptime(checkin_time_str, "%Y-%m-%d %H:%M:%S")
+                checkin_time_fmt = dt_obj.strftime("%I:%M %p")
+            except ValueError:
+                logger.warning("Invalid check-in time format")
+
+        return {
+            "full_name": full_name,
+            "profile_thumb": thumb_url,
+            "job_position": job_position,
+            "checkin_time": checkin_time_fmt,
+            "duration": duration
+        }
+
+    except Exception as e:
+        logger.error(f"❌ Login attempt failed: {e}")
+        return None
+
+
+
 
 load_dotenv()
 
 url = os.getenv('URL')
 
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
+SPLASH_HONE = """
+#:import Animation kivy.animation.Animation
+
+MDScreen:
+    name: 'intro'
+
+    MDFloatLayout:
+
+        MDLabel:
+            id: label1
+            text: 'WELCOME'
+            theme_text_color: 'Custom'
+            pos_hint: {"center_x": 0.5, "center_y": 0.5}
+            text_color: 0.5, 0.5, 0.5, 1
+            bold: True
+            adaptive_size: True
+            font_size: "60sp"
+            opacity: 1
+
+        # MDIconButton for logo
+        BoxLayout:
+            orientation: 'vertical'
+            size_hint: None, None
+            size: self.minimum_width, self.minimum_height
+            pos_hint: {"center_x": 0.5, "center_y": 0.5}
+            adaptive_size: True
+
+
+            # MDIconButton for logo
+            MDIconButton:
+                id: my_icon1
+                icon_size: "110sp"
+                icon: "src/img/logo.png"
+                pos_hint: {"center_x": 0.5, "center_y": 0.5}
+                theme_text_color: "Custom"
+                on_release: app.root.current = 'Login'
+                opacity: 0
+
+            # Text label 'NEXGENO'
+            MDLabel:
+                id: label2
+                text: 'NEXGENO'
+                adaptive_size: True
+                theme_text_color: 'Custom'
+                text_color: 0.5, 0.5, 0.5, 1
+                bold: True
+                font_size: "60sp"
+                opacity: 0
+
+            # Text label for 'TECHNOLOGY PRIVATE LIMITED'
+            MDLabel:
+                id: label3
+                text: 'TECHNOLOGY PRIVATE LIMITED'
+                theme_text_color: 'Custom'
+                adaptive_size: True
+                text_color: 0.5, 0.5, 0.5, 1
+                pos_hint: {"center_x": 0.5, "center_y": 0.5}
+                font_style: 'Body1'
+                font_size: "10sp"
+                opacity: 0
+
+"""
+
+KV = """
+
+
+<LoaderOverlay@FloatLayout>:
+    canvas.before:
+        Color:
+            rgba: 0, 0, 0, 0.4
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+    MDProgressBar:
+        id: loader_overlay
+        size_hint: None, None
+        size: "410dp", "10dp"  # Adjust size according to button size
+        pos_hint: {"center_x": 0.22, "center_y": 0.3}
+        color: app.theme_cls.primary_color  # Set color
+        max: 100  # Maximum value for the progress
+        value: 0  # Start with 0 progress value
+        orientation: 'horizontal'  # Horizontal progress bar
+
+MDScreen:
+    name: 'Login'
+
+    FloatLayout:
+        canvas.before:
+            Color:
+                rgba: 0, 0, 0, 1  # Solid premium black
+            Rectangle:
+                pos: self.pos
+                size: self.size
+
+            # Overlay subtle noise texture
+            Color:
+                rgba: 1, 1, 1, 0.1  # Very subtle white noise
+            Rectangle:
+                source: "src/img/blur.jpg"  # Add a seamless noise image here
+                pos: self.pos
+                size: self.size
+
+
+        LoaderOverlay:
+            id: loader_overlay
+            opacity: 0
+            disabled: True
+
+        BoxLayout:
+            orientation: 'horizontal'
+            spacing: dp(20)
+            padding: dp(40)
+
+            # Left Section - Login Form
+            MDFloatLayout:
+                size_hint_x: 0.5
+
+                # Logo and App Name
+                BoxLayout:
+                    orientation: 'horizontal'
+                    size_hint: None, None
+                    size: dp(180), dp(40)
+                    pos_hint: {"center_x": 0.23, "center_y": 0.85}
+                    spacing: dp(10)
+
+                    FloatLayout:
+                        size_hint: None, None
+                        size: dp(44), dp(44)
+                        
+                        FitImage:
+                            source: "src/img/logo.png"
+                            size_hint: None, None
+                            size: dp(44), dp(44)
+                            pos_hint: {"center_x": 0.5, "center_y": 0.5}
+                            allow_stretch: True
+                            keep_ratio: True
+
+                    # MDLabel:
+                    #     text: "Nexgeno"
+                    #     theme_text_color: 'Custom'
+                    #     text_color: 1, 1, 1, 1
+                    #     font_size: "10sp"
+                    #     valign: 'middle'
+                    #     bold: True
+
+
+                # Title
+                BoxLayout:
+                    orientation: 'vertical'
+                    spacing: dp(0)
+                    size_hint: None, None
+                    size: self.minimum_size
+                    pos_hint: {"center_x": 0.25, "center_y": 0.75}  # Adjust vertical position as needed
+
+                    MDLabel:
+                        text: "Welcome,"
+                        font_style: "H3"  # Equivalent to H2 feel
+                        theme_text_color: "Custom"
+                        adaptive_size: True
+                        text_color: 1, 1, 1, 0.8
+                        halign: "left"
+                        bold: True
+
+                    MDLabel:
+                        text: "To Nexgeno"
+                        adaptive_size: True
+                        font_size: "27sp"
+                        theme_text_color: "Secondary"
+                        halign: "left"
+
+
+                # Login Form
+                BoxLayout:
+                    orientation: 'vertical'
+                    size_hint: 0.65, None
+                    height: self.minimum_height
+                    spacing: dp(20)
+                    pos_hint: {"center_x": 0.41, "center_y": 0.4}
+
+                    # Username
+                    MDTextField:
+                        id: user
+                        icon_left: "account"
+                        hint_text: "Username"
+                        mode: "rectangle"
+                        size_hint_y: None
+                        height: dp(50)
+                        on_text: app.check_input_length()
+                        focus: True 
+
+                    # Password + Eye Toggle
+                    RelativeLayout:
+                        size_hint_y: None
+                        height: dp(50)
+
+                        MDTextField:
+                            id: pass_s
+                            hint_text: "Password"
+                            icon_left: "key"
+                            mode: "rectangle"
+                            size_hint: 1, None
+                            height: dp(50)
+                            password: True
+                            on_text_validate: app.on_password_enter()
+                            on_text: app.check_input_length()
+                            multiline: False
+
+                        MDIconButton:
+                            id: icon_button
+                            icon: "eye-off"
+                            pos_hint: {"center_y": 0.5}
+                            size_hint: None, None
+                            size: dp(24), dp(24)
+                            on_release:
+                                pass_s.password = not pass_s.password
+                                icon_button.icon = "eye-off" if pass_s.password else "eye"
+                            x: pass_s.right - self.width - dp(10)
+
+                    
+
+                    # Remember Me
+                    MDBoxLayout:
+                        orientation: "horizontal"
+                        size_hint: 1, None
+                        height: dp(30)
+                        spacing: dp(10)
+                        padding: [0, dp(3)]  # Adjust vertical padding as needed
+
+
+                        MDCheckbox:
+                            id: remember_me_checkbox
+                            size_hint: None, None
+                            size: dp(24), dp(24)
+                            active: True  # Default checked
+                            on_active: app.update_remember_me(self.active)
+
+                        MDLabel:
+                            text: "Remember Me"
+                            font_size: "14sp"
+                            theme_text_color: "Secondary"
+                            valign: "middle"
+                            pos_hint: {"top": 1}
+                            on_touch_down:
+                                if self.collide_point(*args[1].pos): \
+                                root.ids.remember_me_checkbox.active = not root.ids.remember_me_checkbox.active
+
+
+                    MDLabel:
+                        id: retry_label
+                        text: ""
+                        theme_text_color: "Error"
+                        halign: "center"
+                        markup: True
+                        font_style: "Subtitle1"
+                        opacity: 0  # Hidden by default
+                        pos_hint: {"top": 0.9}
+
+                    # Login Button
+                    MDRaisedButton:
+                        id: login_button
+                        text: "Login"
+                        disabled: True
+                        on_release: app.check_credentials()
+                        size_hint: 1, None
+
+                # Footer: Labels side by side — inside form container
+                BoxLayout:
+                    size_hint_y: None
+                    pos_hint: {"center_x": 0.59, "center_y": 0.1}
+
+                    BoxLayout:
+                        orientation: 'horizontal'
+                        size_hint: None, None
+                        spacing: dp(6)
+                        size: self.minimum_size
+                        pos_hint: {"center_x": 0.5}
+
+                        MDLabel:
+                            text: 'Not a member yet?'
+                            font_size: "12sp"
+                            opacity: 0.6
+                            theme_text_color: "Secondary"
+                            size_hint_x: None
+                            adaptive_size: True
+                            width: self.texture_size[0]
+
+                        MDLabel:
+                            text: 'Contact Admin'
+                            font_size: "12sp"
+                            opacity: 0.8
+                            theme_text_color: 'Custom'
+                            adaptive_size: True
+                            text_color: app.theme_cls.primary_color
+                            size_hint_x: None
+                            width: self.texture_size[0]
+
+            # Right Section - Image
+            FloatLayout:
+                size_hint_x: 0.5
+                padding: [0, dp(30), dp(30), dp(30)]
+
+                FitImage:
+                    source: "src/img/login_page.png"
+                    allow_stretch: True
+                    keep_ratio: True
+                    size_hint: 1.05, 1.05
+                    pos_hint: {"center_x": 0.5, "center_y": 0.5}
+                    radius: [30, 30, 30, 30]
+
+
+"""
+
+
+notify = """
+FloatLayout:
+    canvas.before:
+        Color:
+            rgba: 0.184, 0.184, 0.184, 0.7  # #2f2f2f
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+    BoxLayout:
+        orientation: 'vertical'
+        
+       
+
+        MDFloatLayout:
+            # Time Label - Top Right
+            MDLabel:
+                id: time_label
+                text: "12:45 PM"  # This will be dynamic
+                halign: 'right'
+                theme_text_color: 'Custom'
+                text_color: 1, 1, 1, 0.6
+                font_size: "12sp"
+                pos_hint: {'right': 0.95, 'top': 1.12}
+                
+            MDIconButton:
+                icon: "close-circle"
+                theme_text_color: "Custom"
+                icon_size: "20sp"
+                text_color: 1, 0, 0, 1
+                pos_hint: {'center_x': 0.05, 'center_y': 0.8}
+                opacity: 0.9
+                on_release: app.close_application()
+
+            # Horizontal box to arrange image and user info side by side
+            MDBoxLayout:
+                orientation: 'horizontal'
+                size_hint: None, None
+                size: "300dp", "150dp"
+                padding: "20dp", "20dp"
+                spacing: "15dp"
+                pos_hint: {"right": 0.79, "top": 1.3}
+
+                # User Image
+                FitImage:
+                    id: user_pic
+                    source: ""
+                    size_hint: None, None
+                    size: "70dp", "70dp"
+                    radius: "50dp"
+                    allow_stretch: True
+                    pos_hint: {"right": 0.9, "top": 0.8}
+
+
+                            # User Text Info (vertical box)
+                            # User Text Info (vertical box)
+                MDBoxLayout:
+                    orientation: 'vertical'
+                    spacing: dp(2)
+                    size_hint_y: None
+                    height: self.minimum_height
+                    pos_hint: {"top": 0.69}
+
+                    # Name + Blue Tick (horizontal)
+                    MDBoxLayout:
+                        orientation: 'horizontal'
+                        size_hint_y: None
+                        height: self.minimum_height
+                        spacing: dp(6)
+
+                        MDLabel:
+                            id: user_name
+                            text: "Firoz Shaikh"
+                            adaptive_size: True
+                            font_size: "18sp"
+                            bold: True
+
+                        MDIcon:
+                            icon: "check-decagram"
+                            theme_text_color: "Custom"
+                            text_color: (0.113, 0.631, 0.949, 0.89)
+                            font_size: "15sp"
+                            size_hint: None, None
+                            size: self.texture_size
+                            valign: "middle"
+                            pos_hint: {"top": 0.9}
+
+                    # Position label
+                    MDLabel:
+                        id: user_position 
+                        text: "Head of AI"
+                        theme_text_color: 'Custom'
+                        text_color: 1, 1, 1, 0.8
+                        font_style: 'Caption'
+                        font_size: "13sp"
+                        adaptive_size: True
+"""
 
 
 
@@ -221,6 +759,7 @@ def download_and_optimize_image(url: str, save_path: str, quality: int = 85) -> 
 CACHE_FILE = "user_cache.json"
 
 
+
 def load_user_cache():
     if not os.path.exists(CACHE_FILE):
         return {}
@@ -233,20 +772,53 @@ def save_user_cache(data):
         json.dump(data, f, indent=4)
 
 
-def run_notify_popup(firstname, profile_thumb, checkin_time, job_position):
-    python_executable = sys.executable
-    script_path = os.path.abspath("notify_popup.py")
-    args = [
-        python_executable,
-        script_path,
-        firstname,
-        profile_thumb,
-        checkin_time,
-        job_position
-    ]
-    subprocess.Popen(args)
-
+class NotifyPopupApp(MDApp):
     
+    def __init__(self, firstname="User", profile_thumb="tmp/tester_nexgeno_in_thumb.jpeg", checkin_time="N/A", job_position="Staff", **kwargs):
+        super().__init__(**kwargs)
+        self.firstname = firstname
+        self.profile_thumb = profile_thumb
+        self.checkin_time = checkin_time
+        self.job_position = job_position  # ✅ Added
+
+
+    def build(self):
+        Window.size = [400, 100]
+        self.title = ''
+        Window.top = 50
+        Window.left = 850
+        self.theme_cls.theme_style = "Dark"
+        self.theme_cls.primary_palette = "DeepPurple"
+
+        
+
+        screen = Builder.load_string(notify)
+        
+        screen.ids.user_name.text = self.firstname
+        screen.ids.user_pic.source = self.profile_thumb
+        screen.ids.time_label.text = self.checkin_time
+        screen.ids.user_position.text = self.job_position
+
+        # Close the app after 7 seconds of inactivity
+        Clock.schedule_once(self.close_application, 5)
+        
+        return screen
+    
+    def close_application(self, dt=None):
+        """Close the application."""
+        self.stop()
+
+
+
+def run_notify_popup(firstname, profile_thumb, checkin_time, job_position):
+    
+    firstname = sys.argv[1] if len(sys.argv) > 1 else "Firoz Shaikh"
+    profile_thumb = sys.argv[2] if len(sys.argv) > 2 else "src/img/logo.png"
+    checkin_time = sys.argv[3] if len(sys.argv) > 3 else "09:00 AM"
+    job_position = sys.argv[4] if len(sys.argv) > 4 else "HOD - AI"
+
+    NotifyPopupApp(firstname, profile_thumb, checkin_time, job_position).run()
+
     
 
 
@@ -348,12 +920,13 @@ class Notify(MDApp):
         Window.bind(on_key_down=self.on_key_down)
 
         # Preload sounds once
-        self.success_sound = SoundLoader.load('./src/audio/ting.mp3') or None
-        self.error_sound = SoundLoader.load('./src/audio/delete.mp3') or None
+        self.success_sound = SoundLoader.load(resource_path('./src/audio/ting.mp3')) or None
+        self.error_sound = SoundLoader.load(resource_path('./src/audio/delete.mp3')) or None
 
         self.sm = ScreenManager(transition=FadeTransition(duration=0.2))
-        self.sm.add_widget(Builder.load_file("./Kv/splash.kv"))
-        self.sm.add_widget(Builder.load_file("./Kv/login.kv"))
+
+        self.sm.add_widget(Builder.load_string(SPLASH_HONE))
+        self.sm.add_widget(Builder.load_string(KV))
         return self.sm
     
     def update_loader_progress(self, increment=10):
@@ -453,7 +1026,7 @@ class Notify(MDApp):
             
         firstname = data.get("full_name", "User")  # Updated to full name
         job_position = data.get("job_position", "Staff")  # ✅ Add this line
-        profile_thumb_url = data.get("profile_thumb", "src/img/logo.png")
+        profile_thumb_url = data.get("profile_thumb", resource_path("src\\img\\logo.png"))
         checkin_time = data.get("checkin_time", "N/A")
 
 
@@ -495,7 +1068,7 @@ class Notify(MDApp):
                 img_path = local_img_path
             else:
                 print("[⚠️ Falling back to default image]")
-                img_path = "src/img/logo.png"
+                img_path = resource_path("src\\img\\logo.png")
             Clock.schedule_once(lambda dt: finalize_and_launch_app(img_path), 0)
 
 
@@ -600,8 +1173,6 @@ class Notify(MDApp):
                 show_error_after_delay(0)
 
 
-
-
         def login_thread():
             try:
                 result_data = logic_main(url, username, password)
@@ -612,9 +1183,6 @@ class Notify(MDApp):
                 Clock.schedule_once(lambda dt, err=e: on_login_error(err), 0)
 
         Thread(target=login_thread, daemon=True).start()
-
-
-
 
 
 

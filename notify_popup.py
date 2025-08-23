@@ -10,7 +10,7 @@ from kivymd.app import MDApp
 from kivy.clock import Clock
 import sys
 
-KV = """
+notify = """
 FloatLayout:
     canvas.before:
         Color:
@@ -108,6 +108,9 @@ FloatLayout:
                         adaptive_size: True
 """
 
+
+
+
 class NotifyPopupApp(MDApp):
     
     def __init__(self, firstname="User", profile_thumb="tmp/tester_nexgeno_in_thumb.jpeg", checkin_time="N/A", job_position="Staff", **kwargs):
@@ -128,7 +131,7 @@ class NotifyPopupApp(MDApp):
 
         
 
-        screen = Builder.load_string(KV)
+        screen = Builder.load_string(notify)
         
         screen.ids.user_name.text = self.firstname
         screen.ids.user_pic.source = self.profile_thumb
