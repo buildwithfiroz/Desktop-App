@@ -74,18 +74,6 @@ ADMIN_PASS=your_admin_password
 
 ### Using PyInstaller
 
-1. Install PyInstaller if you haven't already:
-   ```bash
-   pip install pyinstaller
-   ```
-
-2. Build the executable:
-   ```bash
-   pyinstaller --clean --noconfirm build.spec
-   ```
-
-3. The executable will be in the `dist` folder
-
 ## Project Structure
 
 - `login.py` - Main application entry point
