@@ -8,6 +8,7 @@ from kivy.core.window import Window
 from kivy.lang import Builder
 from kivymd.app import MDApp
 from kivy.clock import Clock
+from kivy.core.audio import SoundLoader
 import sys
 
 KV = """
@@ -126,11 +127,20 @@ class NotifyPopupApp(MDApp):
         self.theme_cls.theme_style = "Dark"
         self.theme_cls.primary_palette = "DeepPurple"
 
-        
+        self.success_sound = SoundLoader.load('./src/audio/ting.mp3') or None
+        if self.success_sound:
+            self.success_sound.play()
 
         screen = Builder.load_string(KV)
         
-        screen.ids.user_name.text = self.firstname
+        
+        display_name = self.firstname
+        if len(display_name) >= 12:
+            display_name = display_name[:9] + ".."  
+
+        screen.ids.user_name.text = display_name    
+
+
         screen.ids.user_pic.source = self.profile_thumb
         screen.ids.time_label.text = self.checkin_time
         screen.ids.user_position.text = self.job_position
