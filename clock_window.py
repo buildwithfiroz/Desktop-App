@@ -1018,11 +1018,13 @@ class MsgApp(MDApp):
                 return True
                 
             elif key_name == 'l':
-                print("Ctrl+L detected → Logout")
-                # Trigger logout logic here, e.g., open logout dialog
-                if self.logout_dialog:
-                    self.logout_dialog.open()
+                print("Ctrl+L pressed")
+                self.show_logout_confirmation()
+                
+            elif key_name == 'c':          
+                self.root.current = 'Cal'
                 return True
 
-        return False
+
+
 
