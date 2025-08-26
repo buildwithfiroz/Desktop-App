@@ -16,6 +16,7 @@ import os
 import random
 from datetime import datetime
 from logic.logic import create_session, clock_in
+from kivy.core.audio import SoundLoader
 import threading
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivymd.uix.dialog import MDDialog
@@ -496,7 +497,7 @@ ScreenManager:
                 # ── circular profile picture
                 FitImage:
                     id: profile_image
-                    source: "./tmp/ai_nexgeno_in_thumb.jpg"
+                    source: ""
                     size_hint: None, None
                     size: dp(72), dp(72)
                     pos_hint: {"center_x": 0.5}
@@ -665,6 +666,12 @@ class MsgApp(MDApp):
             att.refresh_calendar()
 
     def build(self):
+        
+        self.success_sound = SoundLoader.load('./src/audio/ting.mp3') or None
+        
+        if self.success_sound:
+            self.success_sound.play()
+        
         self.title = 'MCRM'
         Window.size = (350, 580)
         Window.minimum_size = Window.size
@@ -704,8 +711,17 @@ class MsgApp(MDApp):
 
                 firstname = user_data.get("firstname", "User").title()
                 clock_screen = self.root.get_screen("clock")
-                clock_screen.ids.user_name.text = firstname
-                clock_screen.ids.profile_image.source = user_data.get("profile_thumb", "Wel.png")
+                gen_screen  = self.root.get_screen("general")
+
+                display_name = firstname
+                if len(display_name) >= 12:
+                    display_name = display_name[:9] + ".."
+
+                clock_screen.ids.user_name.text = display_name
+
+                thumb = user_data.get("profile_thumb", "src/img/logo.png")
+                clock_screen.ids.profile_image.source = thumb
+                gen_screen.ids.profile_image.source   = thumb
 
             clocked_in = user_cache.get("clocked_in", False)
             clock_in_time_str = user_cache.get("clock_in_time")
@@ -843,12 +859,6 @@ class MsgApp(MDApp):
     def on_clock_in_button_press(self):
         perform_clock_in_request()
 
-
-
-
-
-    
-    
     
     def show_password_dialog(self):
         if not self.password_dialog:
