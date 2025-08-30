@@ -10,12 +10,13 @@ Whether your team uses ***Windows, macOS, or Linux***, this app ensures seamless
 
 > [!Tip] <h4>Key Features</h4>
 >
-> - ***Fast Login***: Login in just 300–500ms — up to 3× faster than traditional browser/API workflows.
+> - ***Fast Login***: — up to 3× faster than traditional browser/API workflows.
 > - ***Secure One-Time Login***: Stay signed in after your first login using the "Remember Me" feature.
 > - ***Cross-Platform***: Works flawlessly on Windows, macOS, and Linux.
 > - ***Modular Panel (NEW!)***: Team leads/admins can update API endpoints, URLs, or system settings on the fly.
 > - ***Built-In Calendar***: Employees can view which days they’ve clocked in/out for easy tracking.
 > - ***Management***: Secure logout lets devices be reassigned to new users instantly.
+> ---
 > - ***Quick Hotkeys***:
 >     - CTRL + S → Open Settings
 >     - CTRL + B → Go Back 
@@ -62,7 +63,7 @@ Whether your team uses ***Windows, macOS, or Linux***, this app ensures seamless
 > ### How I Solved the Problem
 >
 > So I built CRM Login Enhancer — a desktop app that:
-> - Optimizes login times to ***300-500ms***, making it faster and more efficient
+> - Optimizes login times to ***3X Faster***, making it faster and more efficient
 > - Remembers login credentials for seamless access after the first login
 > - Runs automatically at system startup, ensuring users are always ready to clock in  
 > - Syncs employee data (name, position, etc.) directly from the company’s CRM AP
@@ -78,9 +79,8 @@ Whether your team uses ***Windows, macOS, or Linux***, this app ensures seamless
 ##  How It Works: Step-by-Step User Guide
 
 1. **Launch the App**  
-   - Upon starting the app, it will automatically run in the background on system boot.
-   - You will see a login window prompting you to enter your Username and Password.
-   - The login process may take 300-500ms, much faster than typical APIs.
+  - Upon system boot, the app runs in the background. You'll be prompted to enter your **Username** and **Password** at a **specific time** as per your settings.
+  - For detailed instructions on how to set up and customize this timing, check out the full documentation in the [releases section](https://github.com/buildwithfiroz/Desktop-App/releases).
 
     <br>
    <img src="src/git/Desktop-login.png" alt="Desktop View" width="50%" />
