@@ -19,7 +19,9 @@ Whether your team uses ***Windows, macOS, or Linux***, this app ensures seamless
 > ---
 > - ***Quick Hotkeys***:
 >     - CTRL + S → Open Settings
->     - CTRL + B → Go Back 
+>     - CTRL + B → Go Back
+>     - CTRL + L → Logout
+>     - CTRL + C → Show Calendar
 
 
 <br>
@@ -219,6 +221,26 @@ https://github.com/user-attachments/assets/9b7a71e2-a9ad-4ec1-88ee-ab9846043489
 
 
 <br>
+
+
+## ❓ FAQ
+
+What platforms does this app support?
+- Windows 10/11
+- macOS (Intel + Apple Silicon)
+- Linux (Ubuntu/Debian tested, others may work but have to compile in it)
+
+Does it work offline?
+- You need an active internet connection since the app communicates with your company CRM API for login and time tracking.
+
+Can I customize API endpoints or company login URLs?
+- Admins can update API endpoints directly from the Admin Panel → Settings ( The functionality is limited to what’s provided out of the box.  )
+
+Q: Can I run this on multiple devices? 
+- Yes ! Just Follow the Steps [releases section](https://github.com/buildwithfiroz/Desktop-App/releases).
+
+
+
 <br>
 
 ## 👨‍💻 Author - Contact Information
