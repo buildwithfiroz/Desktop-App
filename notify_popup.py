@@ -1,5 +1,7 @@
 from kivy.config import Config
 
+Config.set('graphics', 'width', '400')
+Config.set('graphics', 'height', '100')
 
 Config.set('graphics', 'resizable', '0')    # Enable resizing
 Config.set('graphics', 'borderless', '1')   # Show window border
@@ -8,6 +10,10 @@ from kivy.core.window import Window
 from kivy.lang import Builder
 from kivymd.app import MDApp
 from kivy.clock import Clock
+from kivy.core.window import Window
+from kivy.core.audio import SoundLoader
+Window.top = (Window.system_size[1] - 100) // 2
+Window.left = (Window.system_size[0] - 400) // 2
 import sys
 
 notify = """
@@ -110,18 +116,20 @@ FloatLayout:
 
 
 
-
 class NotifyPopupApp(MDApp):
-    
-    def __init__(self, firstname="User", profile_thumb="tmp/tester_nexgeno_in_thumb.jpeg", checkin_time="N/A", job_position="Staff", **kwargs):
+    def __init__(self, firstname="User", profile_thumb="src/img/logo.png", 
+                 checkin_time="N/A", job_position="Staff", **kwargs):
         super().__init__(**kwargs)
         self.firstname = firstname
         self.profile_thumb = profile_thumb
         self.checkin_time = checkin_time
-        self.job_position = job_position  # ✅ Added
-
+        self.job_position = job_position
 
     def build(self):
+        from login import resource_path
+        self.success_sound = SoundLoader.load(resource_path('./src/audio/ting.mp3')) or None
+        if self.success_sound:
+            self.success_sound.play()
         Window.size = [400, 100]
         self.title = ''
         Window.top = 50
@@ -129,29 +137,27 @@ class NotifyPopupApp(MDApp):
         self.theme_cls.theme_style = "Dark"
         self.theme_cls.primary_palette = "DeepPurple"
 
-        
-
         screen = Builder.load_string(notify)
-        
+
+        # Update UI elements with passed arguments
         screen.ids.user_name.text = self.firstname
         screen.ids.user_pic.source = self.profile_thumb
         screen.ids.time_label.text = self.checkin_time
         screen.ids.user_position.text = self.job_position
 
-        # Close the app after 7 seconds of inactivity
+        # Close after 5 seconds
         Clock.schedule_once(self.close_application, 5)
-        
         return screen
-    
+
     def close_application(self, dt=None):
-        """Close the application."""
         self.stop()
 
-
 if __name__ == "__main__":
+    # Extract arguments passed via sys.argv (if available)
     firstname = sys.argv[1] if len(sys.argv) > 1 else "Firoz Shaikh"
     profile_thumb = sys.argv[2] if len(sys.argv) > 2 else "src/img/logo.png"
     checkin_time = sys.argv[3] if len(sys.argv) > 3 else "09:00 AM"
     job_position = sys.argv[4] if len(sys.argv) > 4 else "HOD - AI"
 
+    # Run the NotifyPopupApp with the arguments passed
     NotifyPopupApp(firstname, profile_thumb, checkin_time, job_position).run()

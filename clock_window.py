@@ -4,7 +4,7 @@ from kivy.config import Config
 # Must be set before importing any Kivy modules
 Config.set('graphics', 'resizable', '0')    # Enable resizing
 Config.set('graphics', 'borderless', '0')   # Show window border
-
+Config.set('kivy', 'window_icon', 'logo.ico') 
 
 
 from kivy.core.window import Window
@@ -41,8 +41,8 @@ import logging
 from requests.adapters import HTTPAdapter, Retry
 from datetime import datetime
 from dotenv import load_dotenv
+from kivy.core.audio import SoundLoader
 import os 
-
 load_dotenv()
 
 domain = os.getenv('ENDPOINT')
@@ -308,21 +308,6 @@ def days_since_last_login(logins):
         return None
     last = dt.datetime.fromisoformat(max(dates)).date()
     return (dt.date.today() - last).days
-
-
-def update_env_var(key, value, env_path=".env"):
-    from dotenv import dotenv_values
-
-    # Read current env
-    current_env = dotenv_values(env_path)
-
-    # Overwrite or add the key
-    current_env[key] = value
-
-    # Write back
-    with open(env_path, "w") as f:
-        for k, v in current_env.items():
-            f.write(f"{k}={v}\n")
 
 
 def load_user_cache():
@@ -627,7 +612,7 @@ ScreenManager:
                 # ── circular profile picture
                 FitImage:
                     id: profile_image
-                    source: "./tmp/ai_nexgeno_in_thumb.jpg"
+                    source: ""
                     size_hint: None, None
                     size: dp(72), dp(72)
                     pos_hint: {"center_x": 0.5}
@@ -641,22 +626,16 @@ ScreenManager:
                     theme_text_color: "Custom"
                     text_color: 1, 1, 1, 1
                 MDLabel:
-                    text: "Manage your overall setup and API for Login App."
+                    text: "Manage your overall setup."
                     halign: "center"
                     font_style: "Caption"
                     theme_text_color: "Custom"
                     text_color: 0.8, 0.8, 0.8, 1
 
         MDList:
-            pos_hint: {"center_y": 0.53}
-            spacing: "10dp"
+            pos_hint: {"center_y": 0.58}
+            spacing: "5dp"
 
-
-            OneLineIconListItem:
-                text: "Key"
-                on_release: app.show_password_dialog()
-                IconLeftWidget:
-                    icon: "api"
                     
             OneLineIconListItem:
                 text: "Attendance"
@@ -670,48 +649,6 @@ ScreenManager:
                 IconLeftWidget:
                     icon: "logout"
 
-
-
-<SoftwareUpdateScreen>:
-    name: 'software_update'
-    MDScreen:
-
-        MDTopAppBar:
-            title: "Key"
-            elevation: 4
-            pos_hint: {"top": 1}
-            left_action_items: [['arrow-left', lambda x: app.go_back()]]
-
-            
-
-        MDBoxLayout:
-            orientation: "vertical"
-            spacing: "20dp"
-            padding: "20dp"
-            pos_hint: {"top": 0.75}
-            size_hint_y: None
-            height: self.minimum_height
-
-            MDTextField:
-                id: domain_field
-                hint_text: "Domain"
-                mode: "rectangle"
-                icon_right: "web"
-                size_hint_x: 1
-
-            MDTextField:
-                id: url_field
-                hint_text: "URL"
-                mode: "rectangle"
-                icon_right: "link"
-                size_hint_x: 1
-                    
-                    
-            MDRaisedButton:
-                id: login_button
-                text: "Update"
-                on_release: app.submit_software_update(domain_field.text, url_field.text)
-                size_hint: 1, None
                 
 <Attentions>:
     name: "Cal"
@@ -774,7 +711,7 @@ class MsgApp(MDApp):
         self.clocked_in = False
         self.endpoint = os.getenv('ENDPOINT', '')
         self.url = os.getenv('URL', '')
-        self.admin_pass = os.getenv('ADMIN_PASS', '123')
+
         
         
     def show_date_picker(self):
@@ -796,6 +733,12 @@ class MsgApp(MDApp):
             att.refresh_calendar()
 
     def build(self):
+        from login import resource_path
+        self.success_sound = SoundLoader.load(resource_path('./src/audio/ting.mp3')) or None
+        if self.success_sound:
+            self.success_sound.play()
+        
+        
         self.title = 'MCRM'
         Window.size = (350, 580)
         Window.minimum_size = Window.size
@@ -835,8 +778,13 @@ class MsgApp(MDApp):
 
                 firstname = user_data.get("firstname", "User").title()
                 clock_screen = self.root.get_screen("clock")
+                gen_screen = self.root.get_screen("general")
+                
                 clock_screen.ids.user_name.text = firstname
-                clock_screen.ids.profile_image.source = user_data.get("profile_thumb", "Wel.png")
+                
+                clock_screen.ids.profile_image.source = user_data.get("profile_thumb", "src/img/logo.png")
+                
+                gen_screen.ids.profile_image.source = user_data.get("profile_thumb", "src/img/logo.png")
 
             clocked_in = user_cache.get("clocked_in", False)
             clock_in_time_str = user_cache.get("clock_in_time")
@@ -923,11 +871,6 @@ class MsgApp(MDApp):
         # Bind keyboard
         Window.bind(on_key_down=self.on_key_down)
 
-        # Pre-fill Software Update fields
-        domain_field = self.root.get_screen("software_update").ids.domain_field
-        url_field = self.root.get_screen("software_update").ids.url_field
-        domain_field.text = self.endpoint
-        url_field.text = self.url
 
 
     def update_clock_label(self, dt):
@@ -1009,16 +952,7 @@ class MsgApp(MDApp):
         self.password_dialog.dismiss()
 
 
-    def verify_password_dialog(self, *args):
-        entered_pass = self.password_text_field.text
-        self.password_text_field.text = ""  # Clear input
 
-        if entered_pass == self.admin_pass:
-            self.password_dialog.dismiss()
-            self.show_software_update_screen()
-        else:
-            self.password_dialog.dismiss()
-            self.show_error_dialog("Incorrect password!")
 
 
     def show_error_dialog(self, message):
@@ -1032,33 +966,7 @@ class MsgApp(MDApp):
             self.error_dialog.text = message
         self.error_dialog.open()
 
-    def show_software_update_screen(self):
-        self.root.current = "software_update"
 
-    def submit_software_update(self, domain, url):
-        
-        domain = domain.strip()
-        url = url.strip()
-        
-        if not domain or not url:
-            self.show_error_dialog("Domain and URL cannot be empty.")
-            return
-        
-        
-        # Save or apply update logic here
-        print(f"Updating Domain: {domain}, URL: {url}")
-        self.endpoint = domain
-        self.url = url
-
-        self.root.current = "general"
-        
-        update_env_var("ENDPOINT", domain)
-        update_env_var("URL", url)
-
-        self.endpoint = domain
-        self.url = url
-        
-        self.show_success_dialog("Update successful!")
 
     def show_logout_confirmation(self):
         if not self.logout_dialog:
@@ -1139,10 +1047,11 @@ class MsgApp(MDApp):
                 return True
                 
             elif key_name == 'l':
-                print("Ctrl+L detected → Logout")
-                # Trigger logout logic here, e.g., open logout dialog
-                if self.logout_dialog:
-                    self.logout_dialog.open()
+                print("Ctrl+L pressed")
+                self.show_logout_confirmation()
+                
+            elif key_name == 'c':          # <-- NEW
+                self.root.current = 'Cal'
                 return True
 
         return False

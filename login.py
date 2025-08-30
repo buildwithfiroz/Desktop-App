@@ -1,130 +1,3 @@
-# ------------------------------------------------------------------
-# 0.  BOOTSTRAP & PERSISTENCE LAYER  (runs first)
-# ------------------------------------------------------------------
-import os, sys, json, subprocess, datetime, pathlib, threading, time
-import psutil
-
-TASK_NAME_BOOT = "NexgenoLogin_Boot"
-TASK_NAME_859  = "NexgenoLogin_859AM"
-EXE_PATH       = pathlib.Path(sys.executable if getattr(sys, 'frozen', False) else __file__).resolve()
-CACHE_FILE     = pathlib.Path(__file__).with_name("run_cache.json")
-LOG_FILE       = pathlib.Path(__file__).with_name("guardian.log")
-
-# ---------- tiny logger ----------
-def log(msg):
-    ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    line = f"[{ts}] {msg}\n"
-    print(line, end="")
-    with LOG_FILE.open("a") as f:
-        f.write(line)
-
-# ---------- cache ----------
-def load_cache():
-    try:
-        return json.loads(CACHE_FILE.read_text())
-    except Exception:
-        return {}
-
-def save_cache(d):
-    CACHE_FILE.write_text(json.dumps(d, indent=2))
-
-def already_ran_today():
-    return load_cache().get("last_run_date") == datetime.datetime.now().strftime("%Y-%m-%d")
-
-def stamp_today():
-    c = load_cache()
-    c["last_run_date"] = datetime.datetime.now().strftime("%Y-%m-%d")
-    save_cache(c)
-
-# ---------- task scheduler ----------
-SCHTASKS = os.path.join(os.environ["SYSTEMROOT"], "System32", "schtasks.exe")
-
-def task_exists(name):
-    return subprocess.run([SCHTASKS, "/Query", "/TN", name], capture_output=True).returncode == 0
-
-def install_tasks():
-    if task_exists(TASK_NAME_BOOT) and task_exists(TASK_NAME_859):
-        return
-    log("Installing scheduled tasks …")
-    boot_xml = f"""<?xml version="1.0" encoding="UTF-16"?>
-<Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
-  <RegistrationInfo><Description>Nexgeno login – run at logon</Description></RegistrationInfo>
-  <Triggers><LogonTrigger><Enabled>true</Enabled></LogonTrigger></Triggers>
-  <Principals><Principal id="Author"><LogonType>InteractiveToken</LogonType><RunLevel>HighestAvailable</RunLevel></Principal></Principals>
-  <Settings>
-    <StartWhenAvailable>true</StartWhenAvailable><AllowStartIfOnBatteries>true</AllowStartIfOnBatteries>
-    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries><Enabled>true</Enabled>
-    <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
-    <RestartOnFailure><Interval>PT1M</Interval><Count>9999</Count></RestartOnFailure>
-  </Settings>
-  <Actions><Exec><Command>"{EXE_PATH}"</Command><Arguments>--trigger=boot</Arguments></Exec></Actions>
-</Task>"""
-
-    h859_xml = f"""<?xml version="1.0" encoding="UTF-16"?>
-<Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
-  <RegistrationInfo><Description>Nexgeno login – daily 08:59</Description></RegistrationInfo>
-  <Triggers>
-    <CalendarTrigger>
-      <StartBoundary>2024-01-01T08:59:00</StartBoundary>
-      <Enabled>true</Enabled>
-      <ScheduleByDay><DaysInterval>1</DaysInterval></ScheduleByDay>
-    </CalendarTrigger>
-  </Triggers>
-  <Principals><Principal id="Author"><LogonType>InteractiveToken</LogonType><RunLevel>HighestAvailable</RunLevel></Principal></Principals>
-  <Settings>
-    <StartWhenAvailable>true</StartWhenAvailable><AllowStartIfOnBatteries>true</AllowStartIfOnBatteries>
-    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries><Enabled>true</Enabled>
-    <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
-    <RestartOnFailure><Interval>PT1M</Interval><Count>9999</Count></RestartOnFailure>
-  </Settings>
-  <Actions><Exec><Command>"{EXE_PATH}"</Command><Arguments>--trigger=859</Arguments></Exec></Actions>
-</Task>"""
-
-    for name, xml in ((TASK_NAME_BOOT, boot_xml), (TASK_NAME_859, h859_xml)):
-        tmp = pathlib.Path(os.environ["TEMP"]) / f"{name}.xml"
-        tmp.write_text(xml, encoding="utf-16")
-        subprocess.run([SCHTASKS, "/Create", "/F", "/TN", name, "/XML", str(tmp)], check=True)
-    log("Tasks installed.")
-
-# ---------- watchdog ----------
-def watchdog():
-    my_pid = os.getpid()
-    while True:
-        time.sleep(5)
-        if not psutil.pid_exists(my_pid):
-            log("Watchdog respawning …")
-            subprocess.Popen([str(EXE_PATH), "--trigger=watchdog"])
-            break
-
-# ---------- entry point ----------
-def bootstrap():
-    try:
-        install_tasks()
-    except Exception as e:
-        log(f"Task install failed: {e}")
-
-    # watchdog
-    threading.Thread(target=watchdog, daemon=True).start()
-
-    trigger = (sys.argv[1] if len(sys.argv) > 1 else "").lower()
-
-    if trigger == "--trigger=859":
-        if already_ran_today():
-            log("08:59 already executed today – exiting.")
-            sys.exit(0)
-        stamp_today()
-        log("08:59 trigger – launching GUI.")
-    elif trigger == "--trigger=boot":
-        log("Boot trigger – launching GUI.")
-    else:
-        log("Manual / unknown trigger – launching GUI.")
-
-    # fall through to GUI
-bootstrap()
-del bootstrap, install_tasks, task_exists, watchdog, stamp_today, already_ran_today, save_cache, load_cache, log, SCHTASKS, CACHE_FILE, LOG_FILE, EXE_PATH, TASK_NAME_BOOT, TASK_NAME_859
-
-
-
 from kivy.config import Config
 
 # Must be set before importing any Kivy modules
@@ -162,11 +35,11 @@ import socket
 import logging
 from requests.adapters import HTTPAdapter, Retry
 from datetime import datetime
-from dotenv import load_dotenv
 import os 
 from datetime import datetime
-
-
+os.environ['KIVY_NO_CONSOLELOG'] = '1'  # No console output
+os.environ['KIVY_NO_FILELOG'] = '1'     # No log file
+os.environ['KIVY_LOG_MODE'] = 'PYTHON'  # Skip Kivy's handlers entirely
 load_dotenv()
 
 domain = os.getenv('ENDPOINT')
@@ -177,7 +50,26 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+            
+def run_notify_popup(firstname, profile_thumb, checkin_time, job_position):
 
+    # Clear the popup flag
+    cache_data = load_user_cache()
+    cache_data["popup_needed"] = False
+    save_user_cache(cache_data)
+
+    # Ensure job_position is not None
+    if job_position is None:
+        job_position = "N/A"
+
+    # Start the popup process
+    subprocess.Popen(
+        [sys.executable, os.path.abspath("notify_popup.py"),
+         firstname, profile_thumb, checkin_time, job_position],
+        shell=False
+    )
+
+        
 def create_session() -> requests.Session:
     session = requests.Session()
     retries = Retry(
@@ -756,6 +648,8 @@ def download_and_optimize_image(url: str, save_path: str, quality: int = 85) -> 
         print(f"[❌ Image Download Error] URL: {url} | Error: {e}")
         return False
 
+
+
 CACHE_FILE = "user_cache.json"
 
 
@@ -810,14 +704,6 @@ class NotifyPopupApp(MDApp):
 
 
 
-def run_notify_popup(firstname, profile_thumb, checkin_time, job_position):
-    
-    firstname = sys.argv[1] if len(sys.argv) > 1 else "Firoz Shaikh"
-    profile_thumb = sys.argv[2] if len(sys.argv) > 2 else "src/img/logo.png"
-    checkin_time = sys.argv[3] if len(sys.argv) > 3 else "09:00 AM"
-    job_position = sys.argv[4] if len(sys.argv) > 4 else "HOD - AI"
-
-    NotifyPopupApp(firstname, profile_thumb, checkin_time, job_position).run()
 
     
 
@@ -840,7 +726,7 @@ class Notify(MDApp):
         self.failed_login_attempts = 0
         self.locked_out = False
         self.dialog_open = False 
-        
+
         
     def on_password_enter(self):
         if self.locked_out:
@@ -920,7 +806,6 @@ class Notify(MDApp):
         Window.bind(on_key_down=self.on_key_down)
 
         # Preload sounds once
-        self.success_sound = SoundLoader.load(resource_path('./src/audio/ting.mp3')) or None
         self.error_sound = SoundLoader.load(resource_path('./src/audio/delete.mp3')) or None
 
         self.sm = ScreenManager(transition=FadeTransition(duration=0.2))
@@ -1021,8 +906,7 @@ class Notify(MDApp):
 
     def login_success_ui(self, data):
         
-        if self.success_sound:
-            self.success_sound.play()
+
             
         firstname = data.get("full_name", "User")  # Updated to full name
         job_position = data.get("job_position", "Staff")  # ✅ Add this line
@@ -1043,6 +927,7 @@ class Notify(MDApp):
             cache_data = {
                 "logged_in": True,
                 "popup_shown": False,
+                "popup_needed": True,
                 "firstname": firstname,
                 "job_position": job_position,
                 "profile_thumb": img_path,
@@ -1055,8 +940,6 @@ class Notify(MDApp):
             update_login_log(cache_data)
             save_user_cache(cache_data)
 
-            # Launch popup
-            run_notify_popup(firstname, img_path, checkin_time, job_position)
 
             # Exit current app
             self.stop()
@@ -1204,20 +1087,24 @@ class Notify(MDApp):
         self.dialog.bind(on_dismiss=on_dialog_dismiss)
         self.dialog_open = True
         self.dialog.open()
-
-
+        
+        
+   
 
 if __name__ == "__main__":
-    freeze_support()
+    freeze_support()  # This is necessary for multiprocessing in Windows
+
+    # Load user cache (to check if the user is logged in)
     cache_data = load_user_cache()
 
-    # Only auto-login if both logged_in and remember_me are True
+    # Determine if we should auto-login (based on cache)
     should_auto_login = cache_data.get("logged_in", False) and cache_data.get("remember_me", True)
-    
+
     if should_auto_login:
+        # If auto-login is allowed, run the main app
         MsgApp().run()
     else:
-        # Clear credentials if remember_me was unchecked
+        # If auto-login is not allowed and the user isn't logged in, clear credentials
         if cache_data.get("remember_me") is False:
             save_user_cache({
                 "logged_in": False,
@@ -1225,4 +1112,33 @@ if __name__ == "__main__":
                 "username": "",
                 "password": ""
             })
+
+        # Run the Notify app
         Notify().run()
+
+    # After the main app has closed, check if the popup is needed
+    cache_data = load_user_cache()  # Reload cache to check if popup is needed
+    
+    if cache_data.get("popup_needed", False):
+        # Log that the popup is needed
+        print("Popup needed, calling run_notify_popup()")
+        
+        # Make sure the cache data is correct and not None
+        firstname = cache_data.get("firstname", "User")
+        profile_thumb = cache_data.get("profile_thumb", "default.jpg")
+        checkin_time = cache_data.get("checkin_time", "N/A")
+        job_position = cache_data.get("job_position", "N/A")
+        
+        # Run the popup script
+        run_notify_popup(firstname, profile_thumb, checkin_time, job_position)
+    else:
+        # If no popup is needed, log that and do nothing
+        print("No popup needed")
+
+
+
+
+
+
+
+
